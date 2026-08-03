@@ -1,0 +1,200 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+  background: #f5f7fb;
+  color: #1f2937;
+}
+
+.hidden {
+  display: none !important;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 16px 24px;
+  background: #1f3a8a;
+  color: #fff;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.ghost-btn {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #1f2937;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.gnb, .lnb {
+  display: flex;
+  gap: 8px;
+  padding: 10px 16px;
+  border-bottom: 1px solid #dbe2ea;
+  background: #fff;
+  flex-wrap: wrap;
+}
+
+.gnb-btn, .lnb-btn, button[type="submit"], .action-btn {
+  border: none;
+  background: #e2e8f0;
+  color: #1f2937;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.gnb-btn.active, .lnb-btn.active {
+  background: #2563eb;
+  color: #fff;
+}
+
+main {
+  padding: 16px;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+  padding: 16px;
+}
+
+.card h3 {
+  margin: 0 0 8px;
+  font-size: 15px;
+  color: #334155;
+}
+
+.metric {
+  font-size: 28px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.list-box ul {
+  margin: 0;
+  padding-left: 20px;
+}
+
+.section-title {
+  margin: 6px 0 12px;
+  font-size: 18px;
+}
+
+.table-wrap {
+  overflow-x: auto;
+  background: #fff;
+  border: 1px solid #dbe2ea;
+  border-radius: 12px;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 1100px;
+}
+
+th, td {
+  border-bottom: 1px solid #eef2f7;
+  padding: 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+th {
+  background: #f8fafc;
+  white-space: nowrap;
+}
+
+input, select, textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 7px 8px;
+  background: #fff;
+}
+
+textarea {
+  resize: vertical;
+  min-height: 36px;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(130px, 1fr));
+  gap: 8px;
+  align-items: end;
+  margin-bottom: 12px;
+}
+
+.form-grid .full {
+  grid-column: span 2;
+}
+
+.inline-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.small-btn {
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.filter-row input {
+  min-width: 110px;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.5);
+  display: grid;
+  place-items: center;
+  z-index: 999;
+}
+
+.login-card {
+  width: min(420px, 92vw);
+  background: #fff;
+  border-radius: 12px;
+  padding: 20px;
+}
+
+.login-card h2 {
+  margin: 0 0 8px;
+}
+
+.muted {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.login-card form {
+  display: grid;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.round-cell {
+  min-width: 190px;
+}
