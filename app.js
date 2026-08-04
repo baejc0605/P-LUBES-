@@ -1,7 +1,3 @@
-/* =========================
- * 설비관리V1(기계1파트) - SPA
- * ========================= */
-
 const LOGIN_ID = "1004";
 const LOGIN_PW = "1005";
 
@@ -12,18 +8,15 @@ const STORAGE_KEYS = {
 };
 
 const PROCESS_LIST = ["예비소성로", "본소성", "열처리", "혼합설비", "필터프레스", "진공건조기", "냉각기"];
-const HOLIDAYS = [
-  "2026-01-01", "2026-03-01", "2026-05-05", "2026-06-06",
-  "2026-08-15", "2026-10-03", "2026-10-09", "2026-12-25"
-];
+const HOLIDAYS = ["2026-01-01", "2026-03-01", "2026-05-05", "2026-06-06", "2026-08-15", "2026-10-03", "2026-10-09", "2026-12-25"];
 const ROUND_COUNT = 4;
 
 const state = {
-  mainMenu: "home", // home | lubrication
-  subMenu: PROCESS_LIST[0], // process or 관리메뉴
+  main: "home",
+  sub: PROCESS_LIST[0],
   editId: null,
   masterData: [],
-  roundData: {}, // { [id]: [{date, reason}, ...] }
+  roundData: {},
   filters: {
     line: "",
     target: "",
@@ -34,17 +27,16 @@ const state = {
   }
 };
 
-/* ---------- DOM ---------- */
-const dom = {
+const el = {
   loginOverlay: document.getElementById("login-overlay"),
   loginForm: document.getElementById("login-form"),
   loginId: document.getElementById("login-id"),
   loginPw: document.getElementById("login-pw"),
   app: document.getElementById("app"),
   logoutBtn: document.getElementById("logout-btn"),
-  gnbBtns: Array.from(document.querySelectorAll(".gnb-btn")),
+  gnbBtns: [...document.querySelectorAll(".gnb-btn")],
   lnb: document.getElementById("lnb"),
-  lnbBtns: Array.from(document.querySelectorAll(".lnb-btn")),
+  lnbBtns: [...document.querySelectorAll(".lnb-btn")],
   homeSection: document.getElementById("home-section"),
   processSection: document.getElementById("process-section"),
   managementSection: document.getElementById("management-section")
@@ -52,61 +44,60 @@ const dom = {
 
 init();
 
-/* =========================
- * 초기화
- * ========================= */
+/* ---------- init ---------- */
 function init() {
-  loadStorage();
-  bindBaseEvents();
+  loadData();
+  bindEvents();
 
-  if (sessionStorage.getItem(STORAGE_KEYS.AUTH) === "true") openApp();
-  else closeApp();
+  if (sessionStorage.getItem(STORAGE_KEYS.AUTH) === "true") {
+    openApp();
+  } else {
+    closeApp();
+  }
 
   render();
 }
 
-function loadStorage() {
+function bindEvents() {
+  el.loginForm.addEventListener("submit", onLoginSubmit);
+  el.logoutBtn.addEventListener("click", onLogout);
+
+  el.gnbBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.main = btn.dataset.main;
+      render();
+    });
+  });
+
+  el.lnbBtns.forEach((btn) => {
+    btn.addEventListener("click", () => {
+      state.sub = btn.dataset.sub;
+      render();
+    });
+  });
+
+  el.managementSection.addEventListener("submit", onMasterSubmit);
+  el.managementSection.addEventListener("click", onManagementClick);
+
+  el.processSection.addEventListener("input", onProcessInput);
+  el.processSection.addEventListener("change", onProcessChange);
+}
+
+function loadData() {
   state.masterData = JSON.parse(localStorage.getItem(STORAGE_KEYS.MASTER) || "[]");
   state.roundData = JSON.parse(localStorage.getItem(STORAGE_KEYS.ROUNDS) || "{}");
 }
 
-function saveStorage() {
+function saveData() {
   localStorage.setItem(STORAGE_KEYS.MASTER, JSON.stringify(state.masterData));
   localStorage.setItem(STORAGE_KEYS.ROUNDS, JSON.stringify(state.roundData));
 }
 
-/* =========================
- * 로그인/로그아웃
- * ========================= */
-function bindBaseEvents() {
-  dom.loginForm.addEventListener("submit", onLoginSubmit);
-  dom.logoutBtn.addEventListener("click", onLogout);
-
-  dom.gnbBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      state.mainMenu = btn.dataset.main;
-      render();
-    });
-  });
-
-  dom.lnbBtns.forEach((btn) => {
-    btn.addEventListener("click", () => {
-      state.subMenu = btn.dataset.sub;
-      render();
-    });
-  });
-
-  dom.managementSection.addEventListener("submit", onMasterSubmit);
-  dom.managementSection.addEventListener("click", onManagementClick);
-
-  dom.processSection.addEventListener("input", onProcessInput);
-  dom.processSection.addEventListener("change", onProcessChange);
-}
-
+/* ---------- auth ---------- */
 function onLoginSubmit(e) {
   e.preventDefault();
-  const id = dom.loginId.value.trim();
-  const pw = dom.loginPw.value.trim();
+  const id = el.loginId.value.trim();
+  const pw = el.loginPw.value.trim();
 
   if (id === LOGIN_ID && pw === LOGIN_PW) {
     sessionStorage.setItem(STORAGE_KEYS.AUTH, "true");
@@ -123,51 +114,41 @@ function onLogout() {
 }
 
 function openApp() {
-  dom.loginOverlay.classList.add("hidden");
-  dom.app.classList.remove("hidden");
+  el.loginOverlay.classList.add("hidden");
+  el.app.classList.remove("hidden");
 }
 
 function closeApp() {
-  dom.loginOverlay.classList.remove("hidden");
-  dom.app.classList.add("hidden");
+  el.loginOverlay.classList.remove("hidden");
+  el.app.classList.add("hidden");
 }
 
-/* =========================
- * 렌더링
- * ========================= */
+/* ---------- render ---------- */
 function render() {
-  // GNB active
-  dom.gnbBtns.forEach((b) => b.classList.toggle("active", b.dataset.main === state.mainMenu));
+  el.gnbBtns.forEach((b) => b.classList.toggle("active", b.dataset.main === state.main));
+  el.lnbBtns.forEach((b) => b.classList.toggle("active", b.dataset.sub === state.sub));
 
-  // LNB show/hide
-  const isLubrication = state.mainMenu === "lubrication";
-  dom.lnb.classList.toggle("hidden", !isLubrication);
+  const isHome = state.main === "home";
+  const isMgmt = state.main === "lubrication" && state.sub === "관리메뉴";
 
-  dom.lnbBtns.forEach((b) => b.classList.toggle("active", b.dataset.sub === state.subMenu));
-
-  // section show/hide
-  const isHome = state.mainMenu === "home";
-  const isManagement = isLubrication && state.subMenu === "관리메뉴";
-
-  dom.homeSection.classList.toggle("hidden", !isHome);
-  dom.managementSection.classList.toggle("hidden", !isManagement);
-  dom.processSection.classList.toggle("hidden", isHome || isManagement);
+  el.lnb.classList.toggle("hidden", state.main !== "lubrication");
+  el.homeSection.classList.toggle("hidden", !isHome);
+  el.managementSection.classList.toggle("hidden", !isMgmt);
+  el.processSection.classList.toggle("hidden", isHome || isMgmt);
 
   if (isHome) renderHome();
-  else if (isManagement) renderManagement();
-  else renderProcessPage(state.subMenu);
+  else if (isMgmt) renderManagement();
+  else renderProcessPage(state.sub);
 }
 
-/* =========================
- * HOME 대시보드
- * ========================= */
+/* ---------- HOME ---------- */
 function renderHome() {
   const total = state.masterData.length;
-  const done = getMonthlyCompletedCount();
-  const rate = total > 0 ? ((done / total) * 100).toFixed(1) : "0.0";
+  const done = getCompletedCountThisMonth();
+  const rate = total ? ((done / total) * 100).toFixed(1) : "0.0";
   const top5 = getUpcomingTop5();
 
-  dom.homeSection.innerHTML = `
+  el.homeSection.innerHTML = `
     <h2 class="section-title">HOME</h2>
     <div class="card-grid">
       <article class="card">
@@ -181,24 +162,22 @@ function renderHome() {
       <article class="card list-box">
         <h3>다음 예정 설비 TOP 5</h3>
         <ul>
-          ${
-            top5.length
-              ? top5.map((x) => `<li>${x.process} | ${x.target} | ${x.nextDate}</li>`).join("")
-              : "<li>데이터 없음</li>"
-          }
+          ${top5.length
+            ? top5.map((x) => `<li>${escapeHtml(x.process)} | ${escapeHtml(x.target)} | ${x.nextDate}</li>`).join("")
+            : "<li>데이터 없음</li>"}
         </ul>
       </article>
     </div>
   `;
 }
 
-function getMonthlyCompletedCount() {
+function getCompletedCountThisMonth() {
   const now = new Date();
   const y = now.getFullYear();
   const m = now.getMonth();
 
-  return state.masterData.filter((item) => {
-    const rounds = getRounds(item.id);
+  return state.masterData.filter((row) => {
+    const rounds = getRounds(row.id);
     return rounds.some((r) => {
       if (!r.date) return false;
       const d = toDate(r.date);
@@ -209,19 +188,17 @@ function getMonthlyCompletedCount() {
 
 function getUpcomingTop5() {
   return state.masterData
-    .map((item) => ({ ...item, nextDate: calcNextRepairDate(item) }))
+    .map((row) => ({ ...row, nextDate: calcNextRepairDate(row) }))
     .filter((x) => !!x.nextDate)
     .sort((a, b) => toDate(a.nextDate) - toDate(b.nextDate))
     .slice(0, 5);
 }
 
-/* =========================
- * 관리메뉴 (마스터)
- * ========================= */
+/* ---------- 관리메뉴 ---------- */
 function renderManagement() {
   const editItem = state.editId ? state.masterData.find((m) => m.id === state.editId) : null;
 
-  dom.managementSection.innerHTML = `
+  el.managementSection.innerHTML = `
     <h2 class="section-title">급유급지관리 - 관리메뉴</h2>
     <form id="master-form" class="form-grid">
       <input type="hidden" name="id" value="${editItem?.id || ""}" />
@@ -235,14 +212,10 @@ function renderManagement() {
       <div><label>대상</label><input name="target" required value="${escapeHtml(editItem?.target || "")}" /></div>
       <div><label>점검</label><input name="inspection" required value="${escapeHtml(editItem?.inspection || "")}" /></div>
       <div><label>급지포인트</label><input name="point" required value="${escapeHtml(editItem?.point || "")}" /></div>
-      <div><label>주기 (예: 6M, 30D)</label><input name="cycle" required value="${escapeHtml(editItem?.cycle || "")}" /></div>
+      <div><label>주기(예: 6M, 30D)</label><input name="cycle" required value="${escapeHtml(editItem?.cycle || "")}" /></div>
       <div class="full"><label>비고</label><input name="note" value="${escapeHtml(editItem?.note || "")}" /></div>
       <button type="submit" class="action-btn">${editItem ? "수정 저장" : "신규 추가"}</button>
-      ${
-        editItem
-          ? `<button type="button" class="action-btn" data-action="cancel-edit">수정 취소</button>`
-          : ""
-      }
+      ${editItem ? `<button type="button" class="action-btn" data-action="cancel-edit">수정 취소</button>` : ""}
     </form>
 
     <div class="table-wrap">
@@ -253,25 +226,23 @@ function renderManagement() {
           </tr>
         </thead>
         <tbody>
-          ${
-            state.masterData.length
-              ? state.masterData.map((m) => `
-                <tr>
-                  <td>${escapeHtml(m.process)}</td>
-                  <td>${escapeHtml(m.line)}</td>
-                  <td>${escapeHtml(m.target)}</td>
-                  <td>${escapeHtml(m.inspection)}</td>
-                  <td>${escapeHtml(m.point)}</td>
-                  <td>${escapeHtml(m.cycle)}</td>
-                  <td>${escapeHtml(m.note || "")}</td>
-                  <td class="inline-actions">
-                    <button class="small-btn" data-action="edit" data-id="${m.id}">수정</button>
-                    <button class="small-btn" data-action="delete" data-id="${m.id}">삭제</button>
-                  </td>
-                </tr>
-              `).join("")
-              : `<tr><td colspan="8">등록된 기준 정보가 없습니다.</td></tr>`
-          }
+          ${state.masterData.length
+            ? state.masterData.map((m) => `
+              <tr>
+                <td>${escapeHtml(m.process)}</td>
+                <td>${escapeHtml(m.line)}</td>
+                <td>${escapeHtml(m.target)}</td>
+                <td>${escapeHtml(m.inspection)}</td>
+                <td>${escapeHtml(m.point)}</td>
+                <td>${escapeHtml(m.cycle)}</td>
+                <td>${escapeHtml(m.note || "")}</td>
+                <td class="inline-actions">
+                  <button class="small-btn" data-action="edit" data-id="${m.id}">수정</button>
+                  <button class="small-btn" data-action="delete" data-id="${m.id}">삭제</button>
+                </td>
+              </tr>
+            `).join("")
+            : `<tr><td colspan="8">등록된 기준 정보가 없습니다.</td></tr>`}
         </tbody>
       </table>
     </div>
@@ -283,28 +254,30 @@ function onMasterSubmit(e) {
   e.preventDefault();
 
   const fd = new FormData(e.target);
+  const cycle = normalizeCycle(String(fd.get("cycle") || "").trim());
+
+  if (!/^\d+[MD]$/i.test(cycle)) {
+    alert("주기는 예: 6M 또는 30D 형식으로 입력해 주세요.");
+    return;
+  }
+
   const data = {
-    id: fd.get("id") || crypto.randomUUID(),
+    id: String(fd.get("id") || makeId()),
     process: String(fd.get("process") || "").trim(),
     line: String(fd.get("line") || "").trim(),
     target: String(fd.get("target") || "").trim(),
     inspection: String(fd.get("inspection") || "").trim(),
     point: String(fd.get("point") || "").trim(),
-    cycle: normalizeCycle(String(fd.get("cycle") || "").trim()),
+    cycle,
     note: String(fd.get("note") || "").trim()
   };
-
-  if (!/^\d+[MD]$/i.test(data.cycle)) {
-    alert("주기는 예: 6M 또는 30D 형식으로 입력해 주세요.");
-    return;
-  }
 
   const idx = state.masterData.findIndex((x) => x.id === data.id);
   if (idx >= 0) state.masterData[idx] = data;
   else state.masterData.push(data);
 
   state.editId = null;
-  saveStorage();
+  saveData();
   render();
 }
 
@@ -332,20 +305,19 @@ function onManagementClick(e) {
     state.masterData = state.masterData.filter((x) => x.id !== id);
     delete state.roundData[id];
     if (state.editId === id) state.editId = null;
-    saveStorage();
+    saveData();
     render();
   }
 }
 
-/* =========================
- * 공정 페이지
- * ========================= */
+/* ---------- 공정 페이지 ---------- */
 function renderProcessPage(processName) {
   const rows = state.masterData.filter((m) => m.process === processName);
-  const filteredRows = applyProcessFilters(rows);
+  const filtered = applyFilters(rows);
 
-  dom.processSection.innerHTML = `
-    <h2 class="section-title">급유급지관리 - ${processName}</h2>
+  el.processSection.innerHTML = `
+    <h2 class="section-title">급유급지관리 - ${escapeHtml(processName)}</h2>
+
     <div class="table-wrap">
       <table>
         <thead>
@@ -364,4 +336,42 @@ function renderProcessPage(processName) {
           </tr>
           <tr>
             <th>라인</th>
-            <th>대
+            <th>대상</th>
+            <th>점검/급지포인트</th>
+            <th>주기</th>
+            <th>차회수리일자</th>
+            ${Array.from({ length: ROUND_COUNT })
+              .map((_, i) => `<th>${i + 1}회차(일자, 사유)</th>`)
+              .join("")}
+          </tr>
+        </thead>
+        <tbody>
+          ${filtered.length
+            ? filtered.map((row) => {
+                const rounds = getRounds(row.id);
+                const nextDate = calcNextRepairDate(row);
+                return `
+                  <tr>
+                    <td>${escapeHtml(row.line)}</td>
+                    <td>${escapeHtml(row.target)}</td>
+                    <td>${escapeHtml(`${row.inspection} / ${row.point}`)}</td>
+                    <td>${escapeHtml(row.cycle)}</td>
+                    <td>${nextDate || "-"}</td>
+                    ${Array.from({ length: ROUND_COUNT }).map((_, i) => {
+                      const r = rounds[i] || { date: "", reason: "" };
+                      return `
+                        <td class="round-cell">
+                          <input type="date"
+                            data-type="round-date"
+                            data-id="${row.id}"
+                            data-index="${i}"
+                            value="${escapeHtml(r.date || "")}" />
+                          <input type="text"
+                            data-type="round-reason"
+                            data-id="${row.id}"
+                            data-index="${i}"
+                            placeholder="사유"
+                            value="${escapeHtml(r.reason || "")}" />
+                        </td>
+                      `;
+                    }).join
