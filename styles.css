@@ -308,3 +308,55 @@ tbody tr:hover { background: #eef4fc; }
   #quickAddForm { grid-template-columns: repeat(2, 1fr); }
 }
 
+/* =========================================================
+   자동완성 드롭다운
+   ========================================================= */
+.ac-popup {
+  position: absolute;
+  top: calc(100% + 2px);
+  left: 0;
+  right: 0;
+  max-height: 220px;
+  overflow-y: auto;
+  background: #fff;
+  border: 1px solid #ccd3dd;
+  border-radius: 6px;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.12);
+  list-style: none;
+  padding: 4px 0;
+  margin: 0;
+  z-index: 2000;
+  display: none;
+  font-size: 13px;
+}
+.ac-popup.show { display: block; }
+
+.ac-item {
+  padding: 7px 12px;
+  cursor: pointer;
+  color: #333;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background 0.1s;
+}
+.ac-item:hover,
+.ac-item.active {
+  background: #eef4fc;
+  color: #1a3a6c;
+  font-weight: 600;
+}
+.ac-item mark {
+  background: transparent;
+  color: #e67e22;
+  font-weight: 700;
+}
+
+/* 모달 안의 자동완성이 잘리지 않게 */
+#rowModal .modal { overflow: visible; }
+#rowModal .form-row { position: relative; }
+
+/* 스크롤바 살짝 얇게 */
+.ac-popup::-webkit-scrollbar { width: 8px; }
+.ac-popup::-webkit-scrollbar-thumb { background: #ccd3dd; border-radius: 4px; }
+.ac-popup::-webkit-scrollbar-track { background: transparent; }
