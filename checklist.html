@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>체크박스 항목 관리 - 설비관리 테스트V1</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="top-header">
+        <div class="header-title">🔧 설비관리 테스트 V1 (기계1파트)</div>
+        <button class="logout-btn" onclick="logout()">로그아웃</button>
+    </header>
+
+    <nav class="main-nav">
+        <ul>
+            <li><a href="dashboard.html">📊 대시보드</a></li>
+            <li class="has-sub active">
+                <a href="#">🛢️ 급유급지관리 ▾</a>
+                <ul class="sub-menu">
+                    <li><a href="management.html?category=예비소성로">예비소성로</a></li>
+                    <li><a href="management.html?category=본소성">본소성</a></li>
+                    <li><a href="management.html?category=열처리">열처리</a></li>
+                    <li><a href="management.html?category=혼합설비">혼합설비</a></li>
+                    <li><a href="management.html?category=필터프레스">필터프레스</a></li>
+                    <li><a href="management.html?category=진공건조기">진공건조기</a></li>
+                    <li><a href="management.html?category=냉각기">냉각기</a></li>
+                    <li><a href="management.html?category=관리">📋 관리 (통합)</a></li>
+                    <li><a href="checklist.html">⚙️ 체크박스 항목 관리</a></li>
+                </ul>
+            </li>
+            <li class="has-sub">
+                <a href="#">⚙️ 소모품이력관리 ▾</a>
+                <ul class="sub-menu">
+                    <li><a href="#">준비 중</a></li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+
+    <main class="management-main">
+        <h2>⚙️ 체크박스 항목 관리</h2>
+
+        <div class="info-box">
+            💡 각 <strong>라인 + 대상 + 점검/급지 포인트</strong> 조합별로 회차 입력 시 나타나는 <strong>체크박스 항목</strong>을 관리합니다.<br>
+            예) 라인:A / 대상:충진기 / 포인트:베어링 → 체크박스 항목: <code>충진기</code>, <code>컨베이어</code>, <code>열처리</code>
+        </div>
+
+        <!-- 신규 등록 -->
+        <div class="filter-box">
+            <div class="filter-item">
+                <label>라인</label>
+                <input type="text" id="newLine" placeholder="예: A라인">
+            </div>
+            <div class="filter-item">
+                <label>대상</label>
+                <input type="text" id="newTarget" placeholder="예: 충진기">
+            </div>
+            <div class="filter-item">
+                <label>점검/급지 포인트</label>
+                <input type="text" id="newPoint" placeholder="예: 베어링">
+            </div>
+            <div class="filter-item" style="flex:1; min-width:250px;">
+                <label>체크박스 항목 (콤마로 구분)</label>
+                <input type="text" id="newItems" placeholder="예: 충진기, 컨베이어, 열처리" style="min-width:250px;">
+            </div>
+            <button class="filter-btn add" onclick="addChecklist()">➕ 등록</button>
+        </div>
+
+        <!-- 등록된 체크리스트 목록 -->
+        <div class="table-wrapper">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>라인</th>
+                        <th>대상</th>
+                        <th>점검/급지 포인트</th>
+                        <th>체크박스 항목</th>
+                        <th>작업</th>
+                    </tr>
+                </thead>
+                <tbody id="checklistBody"></tbody>
+            </table>
+        </div>
+    </main>
+    <script src="js/checklist.js"></script>
+</body>
+</html>
