@@ -25,6 +25,7 @@
                     <li><a href="management.html?category=진공건조기">진공건조기</a></li>
                     <li><a href="management.html?category=냉각기">냉각기</a></li>
                     <li><a href="management.html?category=관리">📋 관리 (통합)</a></li>
+                    <li><a href="checklist.html">⚙️ 체크박스 항목 관리</a></li>
                 </ul>
             </li>
             <li class="has-sub">
@@ -39,12 +40,11 @@
     <main class="management-main">
         <h2 id="pageTitle">설비관리</h2>
 
-        <!-- 안내문 -->
         <div class="info-box">
-            💡 <strong>주기 입력 방법</strong>: 숫자 + 단위 (예: <code>7D</code> = 7일, <code>1M</code> = 1개월, <code>1Y</code> = 1년)
+            💡 <strong>주기 입력</strong>: <code>7D</code>=7일, <code>1M</code>=1개월, <code>1Y</code>=1년 &nbsp;|&nbsp; 
+            <strong>차회수리일자 규칙</strong>: 마지막 회차의 체크박스가 모두 체크되면 <b>주기대로 계산</b>, 하나라도 미체크면 <b>해당 회차 일자</b>가 차회수리일자
         </div>
 
-        <!-- 필터 영역 -->
         <div class="filter-box">
             <div class="filter-item">
                 <label>라인 필터</label>
@@ -66,7 +66,6 @@
             <button class="filter-btn add" id="addRowBtn" onclick="addNewRow()">➕ 행 추가</button>
         </div>
 
-        <!-- 데이터 테이블 -->
         <div class="table-wrapper">
             <table class="data-table" id="mainTable">
                 <thead>
@@ -76,7 +75,6 @@
             </table>
         </div>
 
-        <!-- 자동완성용 datalist -->
         <datalist id="lineOptions"></datalist>
         <datalist id="targetOptions"></datalist>
         <datalist id="pointOptions"></datalist>
