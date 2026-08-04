@@ -10,125 +10,116 @@ function logout() {
     }
 }
 
-// 체크리스트 저장소: { "라인|대상|포인트": ["항목1", "항목2", ...] }
-function loadChecklists() {
-    return JSON.parse(localStorage.getItem('checklists') || '{}');
+const CATEGORIES = ['예비소성로', '본소성', '열처리', '혼합설비', '필터프레스', '진공건조기', '냉각기'];
+
+// 데이터 구조: [{ category, line, target, point, items:[...] }, ...]
+function loadRows() {
+    return JSON.parse(localStorage.getItem('checklist_rows') || '[]');
 }
-function saveChecklists(obj) {
-    localStorage.setItem('checklists', JSON.stringify(obj));
+function saveRows(rows) {
+    localStorage.setItem('checklist_rows', JSON.stringify(rows));
+    // management.js에서 사용할 조회용 맵도 함께 저장
+    const map = {};
+    rows.forEach(r => {
+        if (r.category && r.line && r.target && r.point && r.items && r.items.length > 0) {
+            const key = `${r.category}|${r.line}|${r.target}|${r.point}`;
+            map[key] = r.items;
+        }
+    });
+    localStorage.setItem('checklists', JSON.stringify(map));
 }
 
-function makeKey(line, target, point) {
-    return `${line}|${target}|${point}`;
+let rows = loadRows();
+
+// 행 추가
+function addRow() {
+    const filterCat = document.getElementById('filterCategory').value;
+    rows.push({
+        category: filterCat || '예비소성로',
+        line: '',
+        target: '',
+        point: '',
+        items: []
+    });
+    saveRows(rows);
+    renderList();
 }
-function parseKey(key) {
-    const [line, target, point] = key.split('|');
-    return { line, target, point };
+
+// 행 삭제
+function deleteRow(idx) {
+    if (!confirm('이 행을 삭제하시겠습니까?')) return;
+    rows.splice(idx, 1);
+    saveRows(rows);
+    renderList();
+}
+
+// 필드 업데이트
+function updateField(idx, field, value) {
+    if (field === 'items') {
+        rows[idx].items = value.split(',').map(s => s.trim()).filter(Boolean);
+    } else {
+        rows[idx][field] = value;
+    }
+    saveRows(rows);
+}
+
+// 전체 저장 (알림용)
+function saveAll() {
+    saveRows(rows);
+    alert('✅ 저장되었습니다. 이제 해당 보조메뉴에 접속하시면 회차란에 체크박스가 표시됩니다.');
 }
 
 // 목록 렌더링
 function renderList() {
-    const data = loadChecklists();
     const tbody = document.getElementById('checklistBody');
+    const filterCat = document.getElementById('filterCategory').value;
     tbody.innerHTML = '';
     
-    const keys = Object.keys(data);
-    if (keys.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" style="padding:20px;color:#999;">등록된 체크박스 항목이 없습니다.</td></tr>';
+    // 필터링 및 원본 인덱스 매핑
+    const filteredRows = [];
+    rows.forEach((r, origIdx) => {
+        if (!filterCat || r.category === filterCat) {
+            filteredRows.push({ row: r, origIdx });
+        }
+    });
+    
+    if (filteredRows.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="padding:20px;color:#999;">등록된 항목이 없습니다. [➕ 행 추가] 버튼을 눌러 시작하세요.</td></tr>';
         return;
     }
     
-    keys.forEach(key => {
-        const { line, target, point } = parseKey(key);
-        const items = data[key];
+    filteredRows.forEach(({ row, origIdx }) => {
         const tr = document.createElement('tr');
+        
+        // 카테고리 select 옵션 만들기
+        const catOptions = CATEGORIES.map(c => 
+            `<option value="${c}" ${row.category === c ? 'selected' : ''}>${c}</option>`
+        ).join('');
+        
         tr.innerHTML = `
-            <td>${line}</td>
-            <td>${target}</td>
-            <td>${point}</td>
-            <td>${items.map(i => `<span class="chk-tag">${i}</span>`).join('')}</td>
             <td>
-                <button class="edit-btn" onclick="editChecklist('${key}')">수정</button>
-                <button class="del-btn" onclick="deleteChecklist('${key}')">삭제</button>
+                <select onchange="updateField(${origIdx}, 'category', this.value); renderList();" 
+                    style="padding:7px;border:1px solid #bbb;border-radius:4px;background:#f0f0f0;width:100%;">
+                    ${catOptions}
+                </select>
+            </td>
+            <td><input type="text" value="${row.line || ''}" placeholder="예: 1라인" 
+                oninput="updateField(${origIdx}, 'line', this.value)"></td>
+            <td><input type="text" value="${row.target || ''}" placeholder="예: 충진기" 
+                oninput="updateField(${origIdx}, 'target', this.value)"></td>
+            <td><input type="text" value="${row.point || ''}" placeholder="예: 베어링" 
+                oninput="updateField(${origIdx}, 'point', this.value)"></td>
+            <td><input type="text" value="${(row.items || []).join(', ')}" 
+                placeholder="예: 상부, 하부" 
+                oninput="updateField(${origIdx}, 'items', this.value)"
+                style="min-width:250px;"></td>
+            <td>
+                <button class="del-btn" onclick="deleteRow(${origIdx})">삭제</button>
             </td>
         `;
         tbody.appendChild(tr);
     });
 }
 
-// 신규 등록
-function addChecklist() {
-    const line = document.getElementById('newLine').value.trim();
-    const target = document.getElementById('newTarget').value.trim();
-    const point = document.getElementById('newPoint').value.trim();
-    const itemsStr = document.getElementById('newItems').value.trim();
-    
-    if (!line || !target || !point) {
-        alert('라인, 대상, 점검/급지 포인트를 모두 입력해주세요.');
-        return;
-    }
-    if (!itemsStr) {
-        alert('체크박스 항목을 입력해주세요. (콤마로 구분)');
-        return;
-    }
-    
-    const items = itemsStr.split(',').map(s => s.trim()).filter(Boolean);
-    if (items.length === 0) {
-        alert('유효한 체크박스 항목이 없습니다.');
-        return;
-    }
-    
-    const data = loadChecklists();
-    const key = makeKey(line, target, point);
-    
-    if (data[key]) {
-        if (!confirm(`이미 등록된 조합입니다.\n(${line} / ${target} / ${point})\n\n덮어쓰시겠습니까?`)) return;
-    }
-    
-    data[key] = items;
-    saveChecklists(data);
-    
-    // 입력 필드 초기화
-    document.getElementById('newLine').value = '';
-    document.getElementById('newTarget').value = '';
-    document.getElementById('newPoint').value = '';
-    document.getElementById('newItems').value = '';
-    
-    alert('등록되었습니다.');
-    renderList();
-}
-
-// 수정
-function editChecklist(key) {
-    const data = loadChecklists();
-    const items = data[key];
-    if (!items) return;
-    
-    const current = items.join(', ');
-    const newItemsStr = prompt('체크박스 항목을 수정하세요. (콤마로 구분)', current);
-    if (newItemsStr === null) return;
-    
-    const newItems = newItemsStr.split(',').map(s => s.trim()).filter(Boolean);
-    if (newItems.length === 0) {
-        alert('최소 1개 이상의 항목이 필요합니다.');
-        return;
-    }
-    
-    data[key] = newItems;
-    saveChecklists(data);
-    alert('수정되었습니다.');
-    renderList();
-}
-
-// 삭제
-function deleteChecklist(key) {
-    const { line, target, point } = parseKey(key);
-    if (!confirm(`정말 삭제하시겠습니까?\n\n라인: ${line}\n대상: ${target}\n포인트: ${point}`)) return;
-    
-    const data = loadChecklists();
-    delete data[key];
-    saveChecklists(data);
-    renderList();
-}
-
+// 초기 로드
 renderList();
