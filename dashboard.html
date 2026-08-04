@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>대시보드 - 설비관리 테스트V1</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+    <!-- 헤더 & 메뉴 -->
+    <header class="top-header">
+        <div class="header-title">🔧 설비관리 테스트 V1 (기계1파트)</div>
+        <button class="logout-btn" onclick="logout()">로그아웃</button>
+    </header>
+
+    <nav class="main-nav">
+        <ul>
+            <li class="active"><a href="dashboard.html">📊 대시보드</a></li>
+            <li class="has-sub">
+                <a href="#">🛢️ 급유급지관리 ▾</a>
+                <ul class="sub-menu">
+                    <li><a href="management.html?category=예비소성로">예비소성로</a></li>
+                    <li><a href="management.html?category=본소성">본소성</a></li>
+                    <li><a href="management.html?category=열처리">열처리</a></li>
+                    <li><a href="management.html?category=혼합설비">혼합설비</a></li>
+                    <li><a href="management.html?category=필터프레스">필터프레스</a></li>
+                    <li><a href="management.html?category=진공건조기">진공건조기</a></li>
+                    <li><a href="management.html?category=냉각기">냉각기</a></li>
+                    <li><a href="management.html?category=관리">📋 관리 (통합)</a></li>
+                </ul>
+            </li>
+            <li class="has-sub">
+                <a href="#">⚙️ 소모품이력관리 ▾</a>
+                <ul class="sub-menu">
+                    <li><a href="#">준비 중</a></li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+
+    <main class="dashboard-main">
+        <h2>📊 대시보드</h2>
+
+        <!-- 요약 카드 -->
+        <div class="summary-cards">
+            <div class="summary-card urgent">
+                <div class="card-title">🚨 차회수리일자 도달</div>
+                <div class="card-value" id="urgentCount">0</div>
+                <div class="card-desc">건</div>
+            </div>
+            <div class="summary-card warning">
+                <div class="card-title">⚠️ 7일 이내 예정</div>
+                <div class="card-value" id="warningCount">0</div>
+                <div class="card-desc">건</div>
+            </div>
+            <div class="summary-card normal">
+                <div class="card-title">✅ 정상</div>
+                <div class="card-value" id="normalCount">0</div>
+                <div class="card-desc">건</div>
+            </div>
+            <div class="summary-card total">
+                <div class="card-title">📌 전체 등록</div>
+                <div class="card-value" id="totalCount">0</div>
+                <div class="card-desc">건</div>
+            </div>
+        </div>
+
+        <!-- 그래프 영역 -->
+        <div class="chart-container">
+            <div class="chart-box">
+                <h3>📈 카테고리별 작업 진행률</h3>
+                <canvas id="progressChart"></canvas>
+            </div>
+            <div class="chart-box">
+                <h3>📊 카테고리별 등록 현황</h3>
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+
+        <!-- 차회수리일자 도달 리스트 -->
+        <div class="urgent-list-box">
+            <h3>🚨 차회수리일자 도달 항목</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>카테고리</th>
+                        <th>라인</th>
+                        <th>대상</th>
+                        <th>점검/급지 포인트</th>
+                        <th>차회수리일자</th>
+                        <th>D-Day</th>
+                    </tr>
+                </thead>
+                <tbody id="urgentTableBody"></tbody>
+            </table>
+        </div>
+    </main>
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
