@@ -214,3 +214,20 @@ tbody tr:hover { background: #eef4fc; }
 }
 
 /* 회차
+
+/* ---------- 인라인 추가 폼 강조 ---------- */
+#quickAddForm {
+  border-left: 4px solid #2ecc71;
+  background: #fbfffb;
+}
+#quickAddForm label { color: #27ae60; }
+#btnQuickAdd { background: #27ae60; }
+#btnQuickAdd:hover { background: #1e8449; }
+
+/* 회차가 늘어나도 가로 스크롤이 깔끔하게 */
+.table-wrap { max-width: 100%; }
+#processTable { min-width: 1200px; }
+
+/* 회차 셀 폭 살짝 축소 (많이 늘어나도 답답하지 않게) */
+#processTable .round-cell { min-width: 130px; }
+
