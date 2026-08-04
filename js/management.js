@@ -21,6 +21,12 @@ document.getElementById('pageTitle').textContent =
 
 if (isManageView) document.getElementById('addRowBtn').style.display = 'none';
 
+// ★ 관리 뷰인 경우 체크박스 필터 UI 표시
+if (isManageView) {
+    const chkFilterEl = document.getElementById('checkFilterBox');
+    if (chkFilterEl) chkFilterEl.style.display = 'flex';
+}
+
 // ===== 데이터 로드/저장 =====
 function loadData(cat) {
     return JSON.parse(localStorage.getItem('equipment_' + cat) || '[]');
@@ -82,7 +88,14 @@ function addCycle(date, cycle) {
     return result;
 }
 
+// ★ 두 날짜 사이 일수 차이
+function daysBetween(d1, d2) {
+    const ms = new Date(d2) - new Date(d1);
+    return Math.round(ms / (1000 * 60 * 60 * 24));
+}
+
 // ===== 차회수리일자 계산 =====
+// ★ 휴지 기간이 예정일 이전에 있거나 겹치면 → 휴지 기간 일수만큼 뒤로 밀기
 function calcNextDate(row) {
     const cycle = parseCycle(row.cycle);
     const rounds = row.rounds || [];
@@ -107,14 +120,26 @@ function calcNextDate(row) {
     
     if (!cycle) return { date: '', locked: false };
     
-    let nextDate = addCycle(new Date(lastRound.date), cycle);
+    const baseDate = new Date(lastRound.date);
+    let nextDate = addCycle(baseDate, cycle);
     
+    // ★ 휴지 기간 반영 (개선)
     if (row.pauseStart && row.pauseEnd) {
         const pStart = new Date(row.pauseStart);
         const pEnd = new Date(row.pauseEnd);
-        if (nextDate >= pStart && nextDate <= pEnd) {
-            nextDate = new Date(pEnd);
-            nextDate.setDate(nextDate.getDate() + 1);
+        
+        // 유효한 휴지 기간인 경우
+        if (pStart <= pEnd) {
+            // 휴지가 기준일 이후에 시작되고, 예정일 이전 혹은 예정일과 겹치면 → 밀기
+            // (즉, 휴지 기간이 [기준일, 예정일] 범위와 조금이라도 겹치면)
+            if (pEnd >= baseDate && pStart <= nextDate) {
+                // 실제 겹치는 구간의 시작
+                const overlapStart = pStart < baseDate ? baseDate : pStart;
+                const overlapEnd = pEnd;
+                // 겹친 일수 (하루 단위 포함 +1)
+                const pauseDays = daysBetween(overlapStart, overlapEnd) + 1;
+                nextDate.setDate(nextDate.getDate() + pauseDays);
+            }
         }
     }
     
@@ -125,6 +150,48 @@ function refreshNextDate(row) {
     const result = calcNextDate(row);
     row.nextDate = result.date;
     row.nextDateLocked = result.locked;
+}
+
+// ===== ★ 체크박스 상태 판단 (취소선용) =====
+// 특정 회차의 특정 항목이 미체크인데, 이후 회차에서 체크되었다면 → strikethrough
+function isStrikethrough(rounds, roundIdx, item) {
+    const r = rounds[roundIdx];
+    if (!r || !r.checks || r.checks[item]) return false; // 자기 자신이 체크면 X
+    // 이후 회차 중 체크된 게 있는지 확인
+    for (let i = roundIdx + 1; i < rounds.length; i++) {
+        if (rounds[i] && rounds[i].checks && rounds[i].checks[item]) return true;
+    }
+    return false;
+}
+
+// ===== ★ 체크박스 필터 판단 (관리 뷰용) =====
+function passCheckFilter(row) {
+    if (!isManageView) return true;
+    const mode = document.getElementById('filterCheck')?.value || 'all';
+    if (mode === 'all') return true;
+    
+    const cat = row._category || category;
+    const items = getChecklistItems(cat, row.line, row.target, row.point);
+    if (items.length === 0) return mode === 'all'; // 항목 미등록 시 all에서만 표시
+    
+    // 마지막 회차 기준으로 판단
+    const rounds = row.rounds || [];
+    let lastRound = null;
+    for (let i = rounds.length - 1; i >= 0; i--) {
+        if (rounds[i] && rounds[i].date) {
+            lastRound = rounds[i];
+            break;
+        }
+    }
+    if (!lastRound) return false;
+    
+    const checks = lastRound.checks || {};
+    const allChecked = items.every(item => checks[item]);
+    const hasUnchecked = items.some(item => !checks[item]);
+    
+    if (mode === 'complete') return allChecked;
+    if (mode === 'incomplete') return hasUnchecked;
+    return true;
 }
 
 // ===== 렌더링: 헤더 =====
@@ -155,7 +222,18 @@ function renderHeader() {
 function renderBody(filterData = null) {
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = '';
-    const data = filterData || currentData;
+    let data = filterData || currentData;
+    
+    // ★ 관리뷰 체크박스 필터 적용
+    if (isManageView) {
+        data = data.filter(passCheckFilter);
+    }
+    
+    if (data.length === 0) {
+        const colspan = 6 + (isManageView ? 1 : 0) + (maxRounds * 3) + (isManageView ? 0 : 1);
+        tbody.innerHTML = `<tr><td colspan="${colspan}" style="padding:30px;color:#999;">표시할 데이터가 없습니다.</td></tr>`;
+        return;
+    }
     
     data.forEach((row, idx) => {
         const tr = document.createElement('tr');
@@ -169,11 +247,12 @@ function renderBody(filterData = null) {
         
         const rowCat = row._category || category;
         const items = getChecklistItems(rowCat, row.line, row.target, row.point);
+        const rounds = row.rounds || [];
         
         let html = '';
         
         if (isManageView) {
-            // 조회 전용
+            // ===== 조회 전용 =====
             html += `<td>${row._category || ''}</td>`;
             const pauseStr = (row.pauseStart || row.pauseEnd) 
                 ? `${row.pauseStart || '?'} ~ ${row.pauseEnd || '?'}` : '';
@@ -187,13 +266,17 @@ function renderBody(filterData = null) {
                 <td>${pauseStr}</td>
             `;
             for (let i = 0; i < maxRounds; i++) {
-                const r = (row.rounds || [])[i] || {};
+                const r = rounds[i] || {};
                 const checks = r.checks || {};
                 const chkHtml = items.length === 0 
                     ? '<span style="color:#999;font-size:11px;">-</span>'
-                    : items.map(item => 
-                        `<span class="chk-tag ${checks[item] ? 'checked' : 'unchecked'}">${checks[item] ? '✓' : '✗'} ${item}</span>`
-                      ).join(' ');
+                    : items.map(item => {
+                        const isChecked = !!checks[item];
+                        const strike = isStrikethrough(rounds, i, item);
+                        const cls = strike ? 'chk-tag unchecked strike' : (isChecked ? 'chk-tag checked' : 'chk-tag unchecked');
+                        const icon = isChecked ? '✓' : '✗';
+                        return `<span class="${cls}">${icon} ${item}</span>`;
+                      }).join(' ');
                 html += `
                     <td>${r.date || ''}</td>
                     <td>${r.reason || ''}</td>
@@ -201,7 +284,7 @@ function renderBody(filterData = null) {
                 `;
             }
         } else {
-            // 편집 가능
+            // ===== 편집 가능 =====
             const cycleValid = validateCycle(row.cycle);
             const nextClass = row.nextDateLocked ? 'next-date-display locked' : 'next-date-display';
             const nextTitle = row.nextDateLocked ? '체크박스 미체크 항목이 있어 마지막 회차 일자로 고정됨' : '';
@@ -224,12 +307,11 @@ function renderBody(filterData = null) {
             `;
             
             for (let i = 0; i < maxRounds; i++) {
-                const r = (row.rounds || [])[i] || {};
+                const r = rounds[i] || {};
                 const checks = r.checks || {};
                 
                 let chkCellHtml = '';
                 if (items.length === 0) {
-                    // ★ 라인/대상/포인트가 모두 입력된 경우만 자동 등록 링크 활성화
                     if (row.line && row.target && row.point) {
                         const url = `checklist.html?category=${encodeURIComponent(rowCat)}&line=${encodeURIComponent(row.line)}&target=${encodeURIComponent(row.target)}&point=${encodeURIComponent(row.point)}`;
                         chkCellHtml = `<div style="font-size:11px;color:#999;padding:5px;line-height:1.5;">
@@ -245,12 +327,14 @@ function renderBody(filterData = null) {
                     chkCellHtml = '<div class="checkbox-list">' + items.map(item => {
                         const safeId = `chk_${idx}_${i}_${item.replace(/[^a-zA-Z0-9가-힣]/g,'_')}`;
                         const safeItem = item.replace(/'/g,"\\'");
+                        const strike = isStrikethrough(rounds, i, item);
+                        const labelStyle = strike ? 'text-decoration:line-through;color:#999;' : '';
                         return `
                             <div class="checkbox-item">
                                 <input type="checkbox" id="${safeId}" 
                                     ${checks[item] ? 'checked' : ''} 
                                     onchange="updateCheck(${idx},${i},'${safeItem}',this.checked)">
-                                <label for="${safeId}">${item}</label>
+                                <label for="${safeId}" style="${labelStyle}">${item}${strike ? ' <span style="font-size:9px;color:#28a745;">(후속완료)</span>' : ''}</label>
                             </div>
                         `;
                     }).join('') + '</div>';
@@ -368,6 +452,13 @@ function resetFilter() {
     document.getElementById('filterLine').value = '';
     document.getElementById('filterTarget').value = '';
     document.getElementById('filterPoint').value = '';
+    const cf = document.getElementById('filterCheck');
+    if (cf) cf.value = 'all';
+    renderBody();
+}
+
+// ★ 체크박스 필터 변경 시
+function applyCheckFilter() {
     renderBody();
 }
 
