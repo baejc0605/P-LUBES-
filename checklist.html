@@ -41,40 +41,40 @@
         <h2>⚙️ 체크박스 항목 관리</h2>
 
         <div class="info-box">
-            💡 각 <strong>라인 + 대상 + 점검/급지 포인트</strong> 조합별로 회차 입력 시 나타나는 <strong>체크박스 항목</strong>을 관리합니다.<br>
-            예) 라인:A / 대상:충진기 / 포인트:베어링 → 체크박스 항목: <code>충진기</code>, <code>컨베이어</code>, <code>열처리</code>
+            💡 각 <strong>보조메뉴(카테고리) + 라인 + 대상 + 점검/급지 포인트</strong> 조합별로 회차 입력 시 나타나는 
+            <strong>체크박스 항목</strong>을 관리합니다.<br>
+            예) 예비소성로 / 1라인 / 충진기 / 베어링 → 체크박스 항목: <code>상부</code>, <code>하부</code>
         </div>
 
-        <!-- 신규 등록 -->
+        <!-- 필터 -->
         <div class="filter-box">
             <div class="filter-item">
-                <label>라인</label>
-                <input type="text" id="newLine" placeholder="예: A라인">
+                <label>카테고리 필터</label>
+                <select id="filterCategory" onchange="renderList()">
+                    <option value="">전체</option>
+                    <option value="예비소성로">예비소성로</option>
+                    <option value="본소성">본소성</option>
+                    <option value="열처리">열처리</option>
+                    <option value="혼합설비">혼합설비</option>
+                    <option value="필터프레스">필터프레스</option>
+                    <option value="진공건조기">진공건조기</option>
+                    <option value="냉각기">냉각기</option>
+                </select>
             </div>
-            <div class="filter-item">
-                <label>대상</label>
-                <input type="text" id="newTarget" placeholder="예: 충진기">
-            </div>
-            <div class="filter-item">
-                <label>점검/급지 포인트</label>
-                <input type="text" id="newPoint" placeholder="예: 베어링">
-            </div>
-            <div class="filter-item" style="flex:1; min-width:250px;">
-                <label>체크박스 항목 (콤마로 구분)</label>
-                <input type="text" id="newItems" placeholder="예: 충진기, 컨베이어, 열처리" style="min-width:250px;">
-            </div>
-            <button class="filter-btn add" onclick="addChecklist()">➕ 등록</button>
+            <button class="filter-btn add" onclick="addRow()">➕ 행 추가</button>
+            <button class="filter-btn" onclick="saveAll()" style="background:#17a2b8;">💾 전체 저장</button>
         </div>
 
-        <!-- 등록된 체크리스트 목록 -->
+        <!-- 목록 테이블 -->
         <div class="table-wrapper">
             <table class="data-table">
                 <thead>
                     <tr>
+                        <th style="min-width:130px;">카테고리(보조메뉴)</th>
                         <th>라인</th>
                         <th>대상</th>
                         <th>점검/급지 포인트</th>
-                        <th>체크박스 항목</th>
+                        <th style="min-width:250px;">체크박스 항목 (콤마로 구분)</th>
                         <th>작업</th>
                     </tr>
                 </thead>
