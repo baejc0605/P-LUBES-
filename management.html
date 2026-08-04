@@ -39,6 +39,11 @@
     <main class="management-main">
         <h2 id="pageTitle">설비관리</h2>
 
+        <!-- 안내문 -->
+        <div class="info-box">
+            💡 <strong>주기 입력 방법</strong>: 숫자 + 단위 (예: <code>7D</code> = 7일, <code>1M</code> = 1개월, <code>1Y</code> = 1년)
+        </div>
+
         <!-- 필터 영역 -->
         <div class="filter-box">
             <div class="filter-item">
@@ -65,17 +70,7 @@
         <div class="table-wrapper">
             <table class="data-table" id="mainTable">
                 <thead>
-                    <tr id="tableHeader">
-                        <th>라인</th>
-                        <th>대상</th>
-                        <th>점검/급지 포인트</th>
-                        <th>주기(일)</th>
-                        <th>차회수리일자</th>
-                        <th>휴지</th>
-                        <th>1회차 일자</th>
-                        <th>1회차 사유</th>
-                        <th>작업</th>
-                    </tr>
+                    <tr id="tableHeader"></tr>
                 </thead>
                 <tbody id="tableBody"></tbody>
             </table>
@@ -85,13 +80,10 @@
         <datalist id="lineOptions"></datalist>
         <datalist id="targetOptions"></datalist>
         <datalist id="pointOptions"></datalist>
+        <datalist id="cycleOptions"></datalist>
         <datalist id="reasonOptions">
-            <option value="정기점검">
-            <option value="급유">
-            <option value="급지">
-            <option value="교체">
-            <option value="설비고장">
-            <option value="휴무">
+            <option value="정기">
+            <option value="돌발">
         </datalist>
     </main>
     <script src="js/management.js"></script>
