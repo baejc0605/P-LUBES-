@@ -1,6 +1,6 @@
 /* =========================================================
    설비관리V1(기계1파트) - Vanilla JS SPA
-   - 예비소성로: 비고 컬럼 제거, sticky 정렬 재조정
+   ✅ 최종본: 표에서 '비고' 컬럼 제거, 좌측 6컬럼 sticky 고정
    ========================================================= */
 
 /* ---------- 상수 ---------- */
@@ -392,7 +392,7 @@ function renderProcessPage(container, process) {
   container.innerHTML = `
     <div class="section-title">🔧 ${process} 급유급지 점검 현황</div>
 
-    <!-- ▼ 인라인 빠른 추가 폼 (비고는 폼에는 남김, 표에는 X) -->
+    <!-- ▼ 인라인 빠른 추가 폼 -->
     <div id="quickAddForm">
       <div><label>라인</label><input id="q_line" placeholder="예: A라인" autocomplete="off"/></div>
       <div><label>대상</label><input id="q_target" placeholder="대상 설비" autocomplete="off"/></div>
@@ -679,10 +679,9 @@ function buildRowsData(process) {
 }
 
 /* =========================================================
-   테이블 렌더 (비고 컬럼 제거 → 고정컬럼 6개)
-   고정 순서: 라인(90) · 대상(140) · 점검/급지포인트(200) ·
-              주기(70)  · 차회수리일자(120) · 휴지(150)
-   합계: 770px  → 그 다음부터 회차/관리 컬럼(스크롤 영역)
+   테이블 렌더 (비고 컬럼 없음 - 좌측 6개 고정)
+   순서: 라인 · 대상 · 점검/급지포인트 · 주기 · 차회수리일자 · 휴지
+        → 이후: 1회차 · 2회차 · ... · 관리
    ========================================================= */
 function renderProcessRows(process, opts = {}) {
   const thead = document.getElementById("processThead");
@@ -746,7 +745,7 @@ function renderThead(process, roundsCnt) {
 
 function renderTbody(rows, roundsCnt) {
   const tbody = document.getElementById("processTbody");
-  // 컬럼 총 개수: 6(고정) + roundsCnt + 1(관리) = 7 + roundsCnt
+  // 총 컬럼: 6(고정) + roundsCnt + 1(관리) = 7 + roundsCnt
   const totalCols = 7 + roundsCnt;
   if (!rows.length) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="${totalCols}" style="padding:20px;color:#888;text-align:center;">검색 결과가 없습니다.</td></tr>`;
