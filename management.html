@@ -42,7 +42,9 @@
 
         <div class="info-box">
             💡 <strong>주기 입력</strong>: <code>7D</code>=7일, <code>1M</code>=1개월, <code>1Y</code>=1년 &nbsp;|&nbsp; 
-            <strong>차회수리일자 규칙</strong>: 마지막 회차의 체크박스가 모두 체크되면 <b>주기대로 계산</b>, 하나라도 미체크면 <b>해당 회차 일자</b>가 차회수리일자
+            <strong>차회수리일자 규칙</strong>: 모두 체크되면 주기대로 계산, 미체크 있으면 마지막 회차 일자로 고정 🔒 &nbsp;|&nbsp; 
+            <strong>휴지 반영</strong>: 예정일이 휴지 기간과 겹치면 <b>휴지 일수만큼 자동 연장</b> &nbsp;|&nbsp; 
+            <strong>취소선</strong>: 이전 회차에서 미체크였다가 이후 회차에서 체크된 항목은 취소선으로 표시
         </div>
 
         <div class="filter-box">
@@ -64,6 +66,21 @@
             <button class="filter-btn" onclick="applyFilter()">🔍 필터 적용</button>
             <button class="filter-btn reset" onclick="resetFilter()">↻ 초기화</button>
             <button class="filter-btn add" id="addRowBtn" onclick="addNewRow()">➕ 행 추가</button>
+        </div>
+
+        <!-- ★ 관리 뷰에서만 표시되는 체크박스 필터 -->
+        <div class="filter-box" id="checkFilterBox" style="display:none;">
+            <div class="filter-item">
+                <label>✅ 체크 상태 필터 (마지막 회차 기준)</label>
+                <select id="filterCheck" onchange="applyCheckFilter()">
+                    <option value="all">🔍 전체 보기</option>
+                    <option value="complete">✅ 완료 (모든 항목 체크)</option>
+                    <option value="incomplete">⚠️ 미완료 (일부 미체크)</option>
+                </select>
+            </div>
+            <div style="align-self:center;color:#666;font-size:13px;">
+                💡 마지막 회차의 체크박스 상태를 기준으로 필터링합니다.
+            </div>
         </div>
 
         <div class="table-wrapper">
