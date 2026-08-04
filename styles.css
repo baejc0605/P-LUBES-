@@ -445,3 +445,160 @@ tbody tr:hover { background: #eef4fc; }
 @media (max-width: 768px) {
   #quickAddForm { grid-template-columns: repeat(2, 1fr); }
 }
+/* =========================================================
+   [예비소성로 외] 공정 페이지 - 필터/테이블 크기 고정
+   ========================================================= */
+
+/* 테이블 자체 */
+#processTable {
+  width: 100%;
+  table-layout: fixed;              /* 컬럼 폭 고정 */
+  border-collapse: collapse;
+  background: #fff;
+}
+
+/* 컬럼 폭 지정 */
+#processTable .col-line   { width: 80px; }
+#processTable .col-target { width: 140px; }
+#processTable .col-point  { width: 200px; }
+#processTable .col-cycle  { width: 70px; }
+#processTable .col-next   { width: 110px; }
+#processTable .col-pause  { width: 140px; }
+#processTable .col-round  { width: 190px; }
+#processTable .col-mgr    { width: 130px; }
+
+/* 헤더 스타일 */
+#processTable thead tr:first-child th {
+  height: 42px;
+  background: #1a3a6c;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border: 1px solid #16305a;
+  padding: 6px 8px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 본문 셀 공통 */
+#processTable tbody td {
+  height: 44px;                      /* 행 높이 고정 */
+  padding: 6px 8px;
+  vertical-align: middle;
+  text-align: center;
+  border: 1px solid #e0e6ed;
+  font-size: 13px;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+/* 회차 셀은 2단(날짜/사유)이라 높이 여유 */
+#processTable tbody td.col-round {
+  height: 72px;
+  white-space: normal;
+  padding: 6px;
+}
+.round-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+}
+.round-cell input {
+  width: 100%;
+  height: 26px;
+  padding: 2px 6px;
+  border: 1px solid #ccd3dd;
+  border-radius: 4px;
+  font-size: 12px;
+  box-sizing: border-box;
+  outline: none;
+}
+.round-cell input:focus {
+  border-color: #1a3a6c;
+  box-shadow: 0 0 0 2px rgba(26, 58, 108, 0.12);
+}
+
+/* ── 필터 행 (검색 input) ── */
+#processTable thead .filter-row th {
+  height: 38px;
+  background: #f5f7fa;
+  padding: 4px 6px;
+  border: 1px solid #e0e6ed;
+}
+#processTable thead .filter-row input {
+  width: 100%;
+  height: 28px;
+  padding: 2px 8px;
+  border: 1px solid #ccd3dd;
+  border-radius: 4px;
+  font-size: 12px;
+  background: #fff;
+  color: #333;
+  box-sizing: border-box;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#processTable thead .filter-row input:focus {
+  border-color: #1a3a6c;
+  box-shadow: 0 0 0 2px rgba(26, 58, 108, 0.15);
+  background: #fff;
+}
+#processTable thead .filter-row input::placeholder {
+  color: #aab2bd;
+  font-size: 12px;
+}
+
+/* 검색 결과 없음 행 */
+#processTable tr.empty-row td {
+  height: auto;
+  white-space: normal;
+  background: #fafbfc;
+  color: #888;
+}
+
+/* 휴지 중 강조 */
+#processTable tbody tr.paused-row td {
+  background: #fff8e5;
+}
+
+/* 관리 버튼 셀 - 두 버튼 나란히 */
+#processTable td.col-mgr {
+  white-space: nowrap;
+}
+#processTable td.col-mgr .btn { margin: 0 2px; }
+
+/* 차회수리일자 강조 */
+.next-date-ok   { color: #1a3a6c; font-weight: 700; }
+.next-date-warn { color: #e67e22; font-weight: 700; }
+
+/* 휴지 버튼 색상 */
+.btn-warn {
+  background: #f39c12;
+  color: #fff;
+  border: none;
+}
+.btn-warn:hover { background: #d78610; }
+.btn-ghost-dark {
+  background: #fff;
+  color: #555;
+  border: 1px solid #ccd3dd;
+}
+.btn-ghost-dark:hover { background: #f0f2f5; }
+
+/* 테이블 감싸는 스크롤 컨테이너 (회차 열 많을 때) */
+.table-wrap {
+  overflow-x: auto;
+  border-radius: 6px;
+  border: 1px solid #e0e6ed;
+}
+.table-wrap::-webkit-scrollbar { height: 10px; }
+.table-wrap::-webkit-scrollbar-thumb { background: #ccd3dd; border-radius: 5px; }
+.table-wrap::-webkit-scrollbar-track { background: #f5f7fa; }
