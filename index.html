@@ -1,72 +1,30 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>설비관리V1(기계1파트)</title>
-  <link rel="stylesheet" href="styles.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>설비관리 테스트V1 (기계1파트) - 로그인</title>
+    <link rel="stylesheet" href="css/style.css">
 </head>
-<body>
-
-  <!-- 로그인 모달 -->
-  <div id="loginModal" class="modal-overlay">
-    <div class="modal login-box">
-      <h2>설비관리V1 로그인</h2>
-      <div class="form-row">
-        <label for="loginId">아이디</label>
-        <input type="text" id="loginId" placeholder="ID" autocomplete="off"/>
-      </div>
-      <div class="form-row">
-        <label for="loginPw">비밀번호</label>
-        <input type="password" id="loginPw" placeholder="PW" autocomplete="off"/>
-      </div>
-      <button id="btnLogin" class="btn btn-primary btn-block">로그인</button>
+<body class="login-body">
+    <div class="login-container">
+        <div class="logo">🔧</div>
+        <h1>설비관리 테스트 V1</h1>
+        <p class="subtitle">기계1파트 - 설비 이력관리 시스템</p>
+        
+        <form id="loginForm">
+            <div class="input-group">
+                <label for="username">아이디</label>
+                <input type="text" id="username" placeholder="아이디를 입력하세요" required>
+            </div>
+            <div class="input-group">
+                <label for="password">비밀번호</label>
+                <input type="password" id="password" placeholder="비밀번호를 입력하세요" required>
+            </div>
+            <button type="submit" class="login-btn">로그인</button>
+        </form>
+        <p class="footer-text">© POSCO FUTURE M - 기계1파트</p>
     </div>
-  </div>
-
-  <!-- 메인 앱 (로그인 후 표시) -->
-  <div id="app" class="app-hidden">
-    <!-- 헤더 -->
-    <header class="header">
-      <h1 class="title">설비관리V1(기계1파트)</h1>
-      <div class="header-right">
-        <span id="userInfo">사용자: -</span>
-        <button id="btnLogout" class="btn btn-ghost">로그아웃</button>
-      </div>
-    </header>
-
-    <!-- GNB (1차 주메뉴) -->
-    <nav class="gnb">
-      <ul>
-        <li><a href="#" data-menu="home" class="gnb-item active">HOME</a></li>
-        <li><a href="#" data-menu="lubrication" class="gnb-item">급유급지관리</a></li>
-      </ul>
-    </nav>
-
-    <!-- LNB (2차 보조메뉴) -->
-    <nav id="lnb" class="lnb hidden">
-      <ul>
-        <li><a href="#" data-sub="예비소성로" class="lnb-item active">예비소성로</a></li>
-        <li><a href="#" data-sub="본소성" class="lnb-item">본소성</a></li>
-        <li><a href="#" data-sub="열처리" class="lnb-item">열처리</a></li>
-        <li><a href="#" data-sub="혼합설비" class="lnb-item">혼합설비</a></li>
-        <li><a href="#" data-sub="필터프레스" class="lnb-item">필터프레스</a></li>
-        <li><a href="#" data-sub="진공건조기" class="lnb-item">진공건조기</a></li>
-        <li><a href="#" data-sub="냉각기" class="lnb-item">냉각기</a></li>
-        <li><a href="#" data-sub="관리메뉴" class="lnb-item lnb-admin">관리메뉴</a></li>
-      </ul>
-    </nav>
-
-    <!-- 콘텐츠 영역 -->
-    <main id="content" class="content">
-      <!-- 페이지 콘텐츠가 동적으로 렌더링됨 -->
-    </main>
-
-    <footer class="footer">
-      <small>© POSCO FUTURE M - 설비관리V1 (기계1파트)</small>
-    </footer>
-  </div>
-
-  <script src="app.js"></script>
+    <script src="js/auth.js"></script>
 </body>
 </html>
