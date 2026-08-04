@@ -31,9 +31,10 @@ function saveData(cat, data) {
 function loadChecklists() {
     return JSON.parse(localStorage.getItem('checklists') || '{}');
 }
-function getChecklistItems(line, target, point) {
+function getChecklistItems(cat, line, target, point) {
     const data = loadChecklists();
-    return data[`${line}|${target}|${point}`] || [];
+    if (!line || !target || !point) return [];
+    return data[`${cat}|${line}|${target}|${point}`] || [];
 }
 
 let currentData = [];
@@ -82,30 +83,27 @@ function addCycle(date, cycle) {
 }
 
 // ===== 차회수리일자 계산 =====
-// - 마지막 회차의 체크박스가 모두 체크되어 있으면 → 주기대로 계산
-// - 하나라도 미체크면 → 마지막 회차 일자를 그대로 차회수리일자로 반환 (locked)
 function calcNextDate(row) {
     const cycle = parseCycle(row.cycle);
     const rounds = row.rounds || [];
+    const cat = row._category || category;
     
-    // 가장 최근 일자 있는 회차 찾기
+    // 마지막 일자 입력 회차 찾기
     let lastRound = null;
-    let lastRoundIdx = -1;
     for (let i = rounds.length - 1; i >= 0; i--) {
         if (rounds[i] && rounds[i].date) {
             lastRound = rounds[i];
-            lastRoundIdx = i;
             break;
         }
     }
     if (!lastRound) return { date: '', locked: false };
     
     // 체크박스 항목 조회
-    const items = getChecklistItems(row.line, row.target, row.point);
+    const items = getChecklistItems(cat, row.line, row.target, row.point);
     const checks = lastRound.checks || {};
     const hasUnchecked = items.some(item => !checks[item]);
     
-    // 하나라도 미체크 → 마지막 회차 일자 그대로
+    // 하나라도 미체크 → 마지막 회차 일자 그대로 (locked)
     if (items.length > 0 && hasUnchecked) {
         return { date: lastRound.date, locked: true };
     }
@@ -134,23 +132,32 @@ function refreshNextDate(row) {
     row.nextDateLocked = result.locked;
 }
 
-// ===== 렌더링 =====
+// ===== 렌더링: 헤더 =====
 function renderHeader() {
     const thead = document.getElementById('tableHeader');
     let html = '';
     if (isManageView) html += '<th>카테고리</th>';
     html += `
-        <th>라인</th><th>대상</th><th>점검/급지 포인트</th>
+        <th>라인</th>
+        <th>대상</th>
+        <th>점검/급지 포인트</th>
         <th>주기<br><small>(1D/1M/1Y)</small></th>
-        <th>차회수리일자</th><th>휴지 (시작 ~ 종료)</th>
+        <th>차회수리일자</th>
+        <th>휴지 (시작 ~ 종료)</th>
     `;
+    // ★ 회차마다 3개 컬럼 (일자, 사유, 체크박스)
     for (let i = 1; i <= maxRounds; i++) {
-        html += `<th>${i}회차<br><small>(일자/사유/체크)</small></th>`;
+        html += `
+            <th style="background:#243b6e;">${i}회차 일자</th>
+            <th style="background:#243b6e;">${i}회차 사유</th>
+            <th style="background:#243b6e;">${i}회차 체크박스</th>
+        `;
     }
     if (!isManageView) html += '<th>작업</th>';
     thead.innerHTML = html;
 }
 
+// ===== 렌더링: 바디 =====
 function renderBody(filterData = null) {
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = '';
@@ -166,11 +173,13 @@ function renderBody(filterData = null) {
             this.classList.add('selected');
         };
         
-        const items = getChecklistItems(row.line, row.target, row.point);
+        const rowCat = row._category || category;
+        const items = getChecklistItems(rowCat, row.line, row.target, row.point);
         
         let html = '';
+        
         if (isManageView) {
-            // 조회 전용
+            // ===== 조회 전용 (관리 뷰) =====
             html += `<td>${row._category || ''}</td>`;
             const pauseStr = (row.pauseStart || row.pauseEnd) 
                 ? `${row.pauseStart || '?'} ~ ${row.pauseEnd || '?'}` : '';
@@ -180,23 +189,25 @@ function renderBody(filterData = null) {
                 <td>${row.target || ''}</td>
                 <td>${row.point || ''}</td>
                 <td>${row.cycle || ''}</td>
-                <td><span class="${nextClass}">${row.nextDate || '-'}</span></td>
+                <td><span class="${nextClass}">${row.nextDate || '-'}${row.nextDateLocked ? ' 🔒' : ''}</span></td>
                 <td>${pauseStr}</td>
             `;
             for (let i = 0; i < maxRounds; i++) {
                 const r = (row.rounds || [])[i] || {};
                 const checks = r.checks || {};
-                const chkHtml = items.map(item => 
-                    `<span class="chk-tag ${checks[item] ? 'checked' : 'unchecked'}">${checks[item] ? '✓' : '✗'} ${item}</span>`
-                ).join(' ');
-                html += `<td>
-                    <div style="font-weight:bold;">${r.date || ''}</div>
-                    <div style="color:#666;font-size:12px;">${r.reason || ''}</div>
-                    <div style="margin-top:5px;">${chkHtml}</div>
-                </td>`;
+                const chkHtml = items.length === 0 
+                    ? '<span style="color:#999;font-size:11px;">-</span>'
+                    : items.map(item => 
+                        `<span class="chk-tag ${checks[item] ? 'checked' : 'unchecked'}">${checks[item] ? '✓' : '✗'} ${item}</span>`
+                      ).join(' ');
+                html += `
+                    <td>${r.date || ''}</td>
+                    <td>${r.reason || ''}</td>
+                    <td>${chkHtml}</td>
+                `;
             }
         } else {
-            // 편집 가능
+            // ===== 편집 가능 =====
             const cycleValid = validateCycle(row.cycle);
             const nextClass = row.nextDateLocked ? 'next-date-display locked' : 'next-date-display';
             const nextTitle = row.nextDateLocked ? '체크박스 미체크 항목이 있어 마지막 회차 일자로 고정됨' : '';
@@ -218,31 +229,34 @@ function renderBody(filterData = null) {
                 </td>
             `;
             
+            // ★ 회차별로 3개 셀 (일자 / 사유 / 체크박스)
             for (let i = 0; i < maxRounds; i++) {
                 const r = (row.rounds || [])[i] || {};
                 const checks = r.checks || {};
                 
-                let chkListHtml = '';
+                // 체크박스 셀
+                let chkCellHtml = '';
                 if (items.length === 0) {
-                    chkListHtml = `<div class="checkbox-list-title">※ 체크박스 항목 미등록<br>(체크박스 항목 관리에서 등록)</div>`;
+                    chkCellHtml = `<div style="font-size:11px;color:#999;padding:5px;">
+                        ※ 체크박스 미등록<br>
+                        <a href="checklist.html" style="color:#2a5298;">항목 관리</a>
+                    </div>`;
                 } else {
-                    chkListHtml = '<div class="checkbox-list">' + items.map(item => `
+                    chkCellHtml = '<div class="checkbox-list">' + items.map(item => `
                         <div class="checkbox-item">
-                            <input type="checkbox" id="chk_${idx}_${i}_${item}" 
+                            <input type="checkbox" id="chk_${idx}_${i}_${item.replace(/[^a-zA-Z0-9가-힣]/g,'_')}" 
                                 ${checks[item] ? 'checked' : ''} 
                                 onchange="updateCheck(${idx},${i},'${item.replace(/'/g,"\\'")}',this.checked)">
-                            <label for="chk_${idx}_${i}_${item}">${item}</label>
+                            <label for="chk_${idx}_${i}_${item.replace(/[^a-zA-Z0-9가-힣]/g,'_')}">${item}</label>
                         </div>
                     `).join('') + '</div>';
                 }
                 
-                html += `<td>
-                    <div class="round-cell">
-                        <input type="date" value="${r.date || ''}" onchange="updateRound(${idx},${i},'date',this.value)">
-                        <input type="text" list="reasonOptions" value="${r.reason || ''}" placeholder="정기/돌발" onchange="updateRound(${idx},${i},'reason',this.value)">
-                        ${chkListHtml}
-                    </div>
-                </td>`;
+                html += `
+                    <td><input type="date" value="${r.date || ''}" onchange="updateRound(${idx},${i},'date',this.value)"></td>
+                    <td><input type="text" list="reasonOptions" value="${r.reason || ''}" placeholder="정기/돌발" onchange="updateRound(${idx},${i},'reason',this.value)"></td>
+                    <td>${chkCellHtml}</td>
+                `;
             }
             
             html += `<td><button class="del-btn" onclick="deleteRow(${idx})">삭제</button></td>`;
@@ -355,7 +369,6 @@ function resetFilter() {
 
 // 초기 로드
 loadCurrentData();
-// 페이지 로드 시 기존 데이터의 차회수리일자 재계산 (체크박스 규칙 반영)
 currentData.forEach(row => refreshNextDate(row));
 if (!isManageView) saveData(category, currentData);
 renderHeader();
