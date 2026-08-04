@@ -38,15 +38,17 @@
     </nav>
 
     <main class="management-main">
-        <h2>⚙️ 체크박스 항목 관리</h2>
+        <h2>⚙️ 체크박스 항목 관리 
+            <span id="saveStatus" style="font-size:13px;color:#28a745;margin-left:15px;opacity:0.5;transition:opacity 0.3s;"></span>
+        </h2>
 
         <div class="info-box">
             💡 각 <strong>보조메뉴(카테고리) + 라인 + 대상 + 점검/급지 포인트</strong> 조합별로 회차 입력 시 나타나는 
             <strong>체크박스 항목</strong>을 관리합니다.<br>
-            예) 예비소성로 / 1라인 / 충진기 / 베어링 → 체크박스 항목: <code>상부</code>, <code>하부</code>
+            📌 입력하는 즉시 <b>자동 저장</b>되며, 각 보조메뉴 페이지에서 조건이 일치하는 행에 체크박스가 자동 표시됩니다.<br>
+            예) 예비소성로 / 1라인 / 충진기 / 베어링 → 체크박스: <code>상부</code>, <code>하부</code>
         </div>
 
-        <!-- 필터 -->
         <div class="filter-box">
             <div class="filter-item">
                 <label>카테고리 필터</label>
@@ -62,10 +64,9 @@
                 </select>
             </div>
             <button class="filter-btn add" onclick="addRow()">➕ 행 추가</button>
-            <button class="filter-btn" onclick="saveAll()" style="background:#17a2b8;">💾 전체 저장</button>
+            <button class="filter-btn" onclick="saveAll()" style="background:#17a2b8;">💾 저장 확인</button>
         </div>
 
-        <!-- 목록 테이블 -->
         <div class="table-wrapper">
             <table class="data-table">
                 <thead>
@@ -75,7 +76,7 @@
                         <th>대상</th>
                         <th>점검/급지 포인트</th>
                         <th style="min-width:250px;">체크박스 항목 (콤마로 구분)</th>
-                        <th>작업</th>
+                        <th style="min-width:100px;">상태 / 작업</th>
                     </tr>
                 </thead>
                 <tbody id="checklistBody"></tbody>
