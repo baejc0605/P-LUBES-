@@ -1,61 +1,72 @@
 <!DOCTYPE html>
 <html lang="ko">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>설비관리V1(기계1파트)</title>
-    <link rel="stylesheet" href="styles.css" />
-  </head>
-  <body>
-    <!-- 로그인 오버레이 -->
-    <div id="login-overlay" class="overlay">
-      <div class="login-card">
-        <h2>설비관리V1 로그인</h2>
-        <p class="muted">로그인 후 메뉴 및 내용을 확인할 수 있습니다.</p>
-        <form id="login-form">
-          <label for="login-id">아이디</label>
-          <input id="login-id" type="text" required />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>설비관리V1(기계1파트)</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
 
-          <label for="login-pw">비밀번호</label>
-          <input id="login-pw" type="password" required />
-
-          <button type="submit">로그인</button>
-        </form>
+  <!-- 로그인 모달 -->
+  <div id="loginModal" class="modal-overlay">
+    <div class="modal login-box">
+      <h2>설비관리V1 로그인</h2>
+      <div class="form-row">
+        <label for="loginId">아이디</label>
+        <input type="text" id="loginId" placeholder="ID" autocomplete="off"/>
       </div>
+      <div class="form-row">
+        <label for="loginPw">비밀번호</label>
+        <input type="password" id="loginPw" placeholder="PW" autocomplete="off"/>
+      </div>
+      <button id="btnLogin" class="btn btn-primary btn-block">로그인</button>
     </div>
+  </div>
 
-    <!-- 앱 본문 -->
-    <div id="app" class="app hidden">
-      <header class="header">
-        <h1>설비관리V1(기계1파트)</h1>
-        <button id="logout-btn" class="ghost-btn">로그아웃</button>
-      </header>
+  <!-- 메인 앱 (로그인 후 표시) -->
+  <div id="app" class="app-hidden">
+    <!-- 헤더 -->
+    <header class="header">
+      <h1 class="title">설비관리V1(기계1파트)</h1>
+      <div class="header-right">
+        <span id="userInfo">사용자: -</span>
+        <button id="btnLogout" class="btn btn-ghost">로그아웃</button>
+      </div>
+    </header>
 
-      <!-- GNB -->
-      <nav class="gnb">
-        <button class="gnb-btn active" data-main="home">HOME</button>
-        <button class="gnb-btn" data-main="lubrication">급유급지관리</button>
-      </nav>
+    <!-- GNB (1차 주메뉴) -->
+    <nav class="gnb">
+      <ul>
+        <li><a href="#" data-menu="home" class="gnb-item active">HOME</a></li>
+        <li><a href="#" data-menu="lubrication" class="gnb-item">급유급지관리</a></li>
+      </ul>
+    </nav>
 
-      <!-- LNB -->
-      <nav id="lnb" class="lnb hidden">
-        <button class="lnb-btn active" data-sub="예비소성로">예비소성로</button>
-        <button class="lnb-btn" data-sub="본소성">본소성</button>
-        <button class="lnb-btn" data-sub="열처리">열처리</button>
-        <button class="lnb-btn" data-sub="혼합설비">혼합설비</button>
-        <button class="lnb-btn" data-sub="필터프레스">필터프레스</button>
-        <button class="lnb-btn" data-sub="진공건조기">진공건조기</button>
-        <button class="lnb-btn" data-sub="냉각기">냉각기</button>
-        <button class="lnb-btn" data-sub="관리메뉴">관리메뉴</button>
-      </nav>
+    <!-- LNB (2차 보조메뉴) -->
+    <nav id="lnb" class="lnb hidden">
+      <ul>
+        <li><a href="#" data-sub="예비소성로" class="lnb-item active">예비소성로</a></li>
+        <li><a href="#" data-sub="본소성" class="lnb-item">본소성</a></li>
+        <li><a href="#" data-sub="열처리" class="lnb-item">열처리</a></li>
+        <li><a href="#" data-sub="혼합설비" class="lnb-item">혼합설비</a></li>
+        <li><a href="#" data-sub="필터프레스" class="lnb-item">필터프레스</a></li>
+        <li><a href="#" data-sub="진공건조기" class="lnb-item">진공건조기</a></li>
+        <li><a href="#" data-sub="냉각기" class="lnb-item">냉각기</a></li>
+        <li><a href="#" data-sub="관리메뉴" class="lnb-item lnb-admin">관리메뉴</a></li>
+      </ul>
+    </nav>
 
-      <main>
-        <section id="home-section"></section>
-        <section id="process-section" class="hidden"></section>
-        <section id="management-section" class="hidden"></section>
-      </main>
-    </div>
+    <!-- 콘텐츠 영역 -->
+    <main id="content" class="content">
+      <!-- 페이지 콘텐츠가 동적으로 렌더링됨 -->
+    </main>
 
-    <script src="app.js"></script>
-  </body>
+    <footer class="footer">
+      <small>© POSCO FUTURE M - 설비관리V1 (기계1파트)</small>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
 </html>
