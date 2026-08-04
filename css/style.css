@@ -107,7 +107,28 @@ body { background: #f0f2f5; min-height: 100vh; }
 
 /* ===== 관리 페이지 ===== */
 .management-main { padding: 30px; }
-.management-main h2 { color: #1e3c72; margin-bottom: 25px; }
+.management-main h2 { color: #1e3c72; margin-bottom: 20px; }
+
+/* 주기 안내 박스 */
+.info-box {
+    background: #fff8e1;
+    border-left: 4px solid #ffc107;
+    padding: 12px 18px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    color: #555;
+    font-size: 14px;
+}
+.info-box code {
+    background: #333;
+    color: #ffd54f;
+    padding: 2px 8px;
+    border-radius: 3px;
+    font-family: 'Consolas', monospace;
+    font-size: 13px;
+    margin: 0 3px;
+}
+
 .filter-box {
     background: white; padding: 20px; border-radius: 10px;
     box-shadow: 0 3px 10px rgba(0,0,0,0.08); margin-bottom: 20px;
@@ -137,23 +158,58 @@ body { background: #f0f2f5; min-height: 100vh; }
     background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
     color: white;
 }
+.data-table thead small { font-size: 10px; opacity: 0.85; font-weight: normal; }
 .data-table th, .data-table td {
-    padding: 12px 15px; text-align: center;
+    padding: 10px 8px; text-align: center;
     border-bottom: 1px solid #e0e0e0; font-size: 13px;
 }
 .data-table tbody tr { cursor: pointer; transition: background 0.2s; }
 .data-table tbody tr:hover { background: #f8f9fa; }
 .data-table tbody tr.selected { background: #fff3cd !important; }
+
+/* 입력칸 회색 배경 */
 .data-table input {
-    width: 100%; border: 1px solid transparent; padding: 6px 8px;
-    text-align: center; font-size: 13px; background: transparent;
+    width: 100%;
+    min-width: 90px;
+    border: 1px solid #bbb;
+    padding: 7px 8px;
+    text-align: center;
+    font-size: 13px;
+    background: #f0f0f0;
+    border-radius: 4px;
+    transition: all 0.2s;
+}
+.data-table input:hover {
+    background: #e8e8e8;
+    border-color: #999;
 }
 .data-table input:focus {
-    outline: none; border-color: #2a5298; background: white;
+    outline: none;
+    border-color: #2a5298;
+    background: #ffffff;
+    box-shadow: 0 0 0 2px rgba(42, 82, 152, 0.2);
 }
+.data-table input[type="date"] { min-width: 130px; }
+.data-table input[type="number"] { min-width: 70px; max-width: 90px; }
+
+/* 잘못된 주기 입력 시 강조 */
+.data-table input.invalid-input {
+    background: #ffe0e0;
+    border-color: #dc3545;
+    color: #dc3545;
+    font-weight: bold;
+}
+
+/* 휴지 기간 셀 */
+.pause-cell {
+    display: flex; flex-direction: column; gap: 4px; align-items: center;
+}
+.pause-cell input[type="date"] { min-width: 130px; }
+.pause-cell .pause-sep { font-size: 11px; color: #666; }
+
 .data-table .del-btn {
     background: #dc3545; color: white; border: none;
-    padding: 5px 10px; border-radius: 4px; cursor: pointer; font-size: 12px;
+    padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 12px;
 }
 .data-table .del-btn:hover { background: #c82333; }
 
@@ -165,3 +221,14 @@ body { background: #f0f2f5; min-height: 100vh; }
 .dday-urgent { background: #dc3545; }
 .dday-warning { background: #ffc107; color: #333; }
 .dday-normal { background: #28a745; }
+
+/* 차회수리일자 표시 */
+.next-date-display {
+    display: inline-block;
+    padding: 6px 10px;
+    background: #e3f2fd;
+    color: #1e3c72;
+    border-radius: 4px;
+    font-weight: bold;
+    min-width: 100px;
+}
