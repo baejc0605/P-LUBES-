@@ -1,12 +1,15 @@
 /* =========================================================
    설비관리V1(기계1파트) - Vanilla JS SPA
+   - 로그인 / 대시보드 / 관리메뉴
+   - 공정별 페이지: 행 추가/수정, 회차 자동 확장, 휴지 관리
+   - 자동완성(Autocomplete) 드롭다운
    ========================================================= */
 
 /* ---------- 상수 ---------- */
 const AUTH = { id: "1004", pw: "1005" };
 const STORAGE_KEY = "eqmt_master_v1";
 const RECORD_KEY  = "eqmt_records_v1";
-const PAUSE_KEY   = "eqmt_pauses_v1";     // 휴지 기간 데이터
+const PAUSE_KEY   = "eqmt_pauses_v1";
 const SESSION_KEY = "eqmt_session";
 
 const HOLIDAYS = [
@@ -18,6 +21,7 @@ const HOLIDAYS = [
 
 const SUB_MENUS = ["예비소성로","본소성","열처리","혼합설비","필터프레스","진공건조기","냉각기","관리메뉴"];
 const MIN_ROUNDS = 4;
+const SUGGEST_FIELDS = ["line", "target", "point", "cycle"]; // 자동완성 대상 필드
 
 let state = {
   currentMenu: "home",
@@ -64,14 +68,13 @@ function parseCycle(cycle) {
   if (!m) return null;
   return { value: parseInt(m[1],10), unit: m[2] };
 }
-/* 두 날짜 사이의 일수 (양쪽 포함) */
 function diffDays(a, b) {
   const ms = 1000*60*60*24;
   return Math.floor((b.getTime() - a.getTime()) / ms) + 1;
 }
 /**
  * 차회수리일자 계산 (휴지기간 반영)
- * = 마지막 회차일자 + 주기 + 휴지기간(마지막 회차일자 이후에 해당하는 일수) → 영업일 이월
+ * = 마지막 회차일자 + 주기 + 휴지기간(마지막 회차 이후분) → 영업일 이월
  */
 function calcNextDate(lastDateStr, cycleStr, pauses) {
   const base = parseDate(lastDateStr);
@@ -82,14 +85,12 @@ function calcNextDate(lastDateStr, cycleStr, pauses) {
   if (cyc.unit === "M") d.setMonth(d.getMonth() + cyc.value);
   else                  d.setDate(d.getDate() + cyc.value);
 
-  // 휴지기간 추가 (마지막 회차일자 이후 & 현재 계산된 차회일자 이전까지의 휴지일수를 밀어냄)
   if (pauses && pauses.length) {
     let pauseDays = 0;
     pauses.forEach(p => {
       const ps = parseDate(p.start);
       const pe = parseDate(p.end);
       if (!ps || !pe) return;
-      // 마지막 회차일자 이후 영역만 적용
       const effStart = ps > base ? ps : new Date(base.getTime() + 86400000);
       const effEnd   = pe;
       if (effEnd >= effStart) {
@@ -102,7 +103,9 @@ function calcNextDate(lastDateStr, cycleStr, pauses) {
   return fmt(nextBusinessDay(d));
 }
 
-/* ---------- 로그인 ---------- */
+/* =========================================================
+   로그인
+   ========================================================= */
 function initLogin() {
   const modal = document.getElementById("loginModal");
   const app   = document.getElementById("app");
@@ -137,7 +140,9 @@ function logout() {
   location.reload();
 }
 
-/* ---------- 메뉴 ---------- */
+/* =========================================================
+   메뉴
+   ========================================================= */
 function initMenu() {
   document.querySelectorAll(".gnb-item").forEach(el => {
     el.addEventListener("click", e => {
@@ -176,7 +181,9 @@ function initMenu() {
   document.getElementById("btnLogout").addEventListener("click", logout);
 }
 
-/* ---------- 라우팅 ---------- */
+/* =========================================================
+   라우팅
+   ========================================================= */
 function renderPage() {
   const c = document.getElementById("content");
   c.innerHTML = "";
@@ -188,7 +195,9 @@ function renderPage() {
   }
 }
 
-/* ---------- HOME ---------- */
+/* =========================================================
+   HOME (대시보드)
+   ========================================================= */
 function renderHome(container) {
   const master = loadMaster();
   const records = loadRecords();
@@ -258,14 +267,16 @@ function renderHome(container) {
   `;
 }
 
-/* ---------- 관리메뉴 ---------- */
+/* =========================================================
+   관리메뉴 (전체 마스터 CRUD)
+   ========================================================= */
 function renderAdmin(container) {
   container.innerHTML = `
     <div class="section-title">🛠 급유급지 마스터 관리 (전체 공정)</div>
 
     <div class="form-grid" id="masterForm">
       <input type="hidden" id="m_id" />
-      <div><label>라인</label><input id="m_line" placeholder="예: A라인"/></div>
+      <div><label>라인</label><input id="m_line" placeholder="예: 1라인"/></div>
       <div><label>대상</label><input id="m_target" placeholder="예: 예비소성로"/></div>
       <div><label>점검</label><input id="m_inspect" placeholder="점검항목"/></div>
       <div><label>급지포인트</label><input id="m_point" placeholder="포인트"/></div>
@@ -405,12 +416,12 @@ function renderProcessPage(container, process) {
       <div class="modal" style="width:480px;">
         <h2 id="rowModalTitle" style="text-align:center;color:#1a3a6c;margin-bottom:18px;">행 추가</h2>
         <input type="hidden" id="r_id"/>
-        <div class="form-row"><label>라인 *</label><input id="r_line"/></div>
-        <div class="form-row"><label>대상 *</label><input id="r_target"/></div>
-        <div class="form-row"><label>점검</label><input id="r_inspect"/></div>
-        <div class="form-row"><label>급지포인트</label><input id="r_point"/></div>
-        <div class="form-row"><label>주기 * (예: 6M, 10D)</label><input id="r_cycle"/></div>
-        <div class="form-row"><label>비고</label><input id="r_remark"/></div>
+        <div class="form-row"><label>라인 *</label><input id="r_line" autocomplete="off"/></div>
+        <div class="form-row"><label>대상 *</label><input id="r_target" autocomplete="off"/></div>
+        <div class="form-row"><label>점검</label><input id="r_inspect" autocomplete="off"/></div>
+        <div class="form-row"><label>급지포인트</label><input id="r_point" autocomplete="off"/></div>
+        <div class="form-row"><label>주기 * (예: 6M, 10D)</label><input id="r_cycle" autocomplete="off"/></div>
+        <div class="form-row"><label>비고</label><input id="r_remark" autocomplete="off"/></div>
         <div style="display:flex;gap:8px;margin-top:10px;">
           <button class="btn btn-primary btn-block" id="btnRowSave">저장</button>
           <button class="btn btn-ghost btn-block" style="color:#333;border-color:#ccd3dd;" id="btnRowCancel">취소</button>
@@ -466,7 +477,9 @@ function renderProcessPage(container, process) {
   renderProcessRows(process);
 }
 
-/* ---------- 행 추가/수정 모달 ---------- */
+/* =========================================================
+   행 추가/수정 모달
+   ========================================================= */
 let _currentProcessForModal = null;
 function openRowModal(process, id) {
   _currentProcessForModal = process;
@@ -486,6 +499,8 @@ function openRowModal(process, id) {
     ["r_id","r_line","r_target","r_inspect","r_point","r_cycle","r_remark"]
       .forEach(fid => document.getElementById(fid).value = "");
   }
+  // 자동완성 바인딩
+  bindAutocomplete(process);
 }
 function closeRowModal() {
   document.getElementById("rowModal").classList.add("hidden");
@@ -517,7 +532,9 @@ function saveRowModal(process) {
   renderProcessRows(process);
 }
 
-/* ---------- 휴지 모달 ---------- */
+/* =========================================================
+   휴지 관리 모달
+   ========================================================= */
 let _currentPauseTargetId = null;
 window.openPauseModal = function(id) {
   _currentPauseTargetId = id;
@@ -578,7 +595,9 @@ function renderPauseList() {
   }).join("");
 }
 
-/* ---------- 회차 자동 확장 ---------- */
+/* =========================================================
+   회차 자동 확장 + 테이블 렌더
+   ========================================================= */
 function calcRoundsCount(rows) {
   let max = MIN_ROUNDS;
   rows.forEach(r => {
@@ -693,24 +712,21 @@ function renderProcessRows(process) {
     `;
   }).join("");
 
-  // 🔑 회차 입력 이벤트 바인딩 (렌더 후 매번 다시 붙임)
+  // 회차 입력 이벤트 (렌더 후 매번 재바인딩) → 5회차 이후 자동 확장 보장
   tbody.querySelectorAll("input[data-id]").forEach(inp=>{
     inp.addEventListener("change", handleRoundChange);
   });
 }
 
-/* 회차 셀 값 변경 핸들러 */
 function handleRoundChange(e) {
   const id = e.target.dataset.id;
   updateRecord(id);
 }
 
-/* 행 수정 진입 */
 window.editRow = function(id) {
   openRowModal(state.currentSub, id);
 };
 
-/* 회차 저장 */
 function updateRecord(id) {
   const inputs = document.querySelectorAll(`#processTbody input[data-id="${id}"]`);
   const recs = [];
@@ -728,11 +744,156 @@ function updateRecord(id) {
   all[id] = cleaned;
   saveRecords(all);
 
-  // 회차/차회수리일자 재계산을 위해 재렌더 → 새 회차 열도 이때 자동 생성됨
   renderProcessRows(state.currentSub);
 }
 
-/* ---------- 시작 ---------- */
+/* =========================================================
+   자동완성 (Autocomplete) 드롭다운
+   ========================================================= */
+/**
+ * 공정별 필드별 후보값 수집
+ */
+function getSuggestions(process, field) {
+  const master = loadMaster().filter(r => r.process === process);
+  const set = new Set();
+  master.forEach(r => {
+    const v = (r[field] || "").trim();
+    if (v) set.add(v);
+  });
+  return Array.from(set).sort((a,b)=> a.localeCompare(b, "ko"));
+}
+
+/**
+ * 모달의 4개 입력칸에 자동완성 부착
+ */
+function bindAutocomplete(process) {
+  const map = [
+    { inputId: "r_line",   field: "line"   },
+    { inputId: "r_target", field: "target" },
+    { inputId: "r_point",  field: "point"  },
+    { inputId: "r_cycle",  field: "cycle"  }
+  ];
+  map.forEach(m => attachAutocomplete(m.inputId, process, m.field));
+}
+
+/**
+ * 개별 input에 자동완성 팝업 부착
+ */
+function attachAutocomplete(inputId, process, field) {
+  const input = document.getElementById(inputId);
+  if (!input) return;
+
+  // 기존 팝업 제거
+  const oldPop = document.getElementById(inputId + "_ac");
+  if (oldPop) oldPop.remove();
+
+  // 이전 이벤트 초기화를 위해 노드 복제·교체 (기존 값 유지)
+  const oldVal = input.value;
+  const clone = input.cloneNode(true);
+  clone.value = oldVal;
+  input.parentNode.replaceChild(clone, input);
+  const el = document.getElementById(inputId);
+
+  // 부모 상대위치
+  const parent = el.parentNode;
+  if (getComputedStyle(parent).position === "static") {
+    parent.style.position = "relative";
+  }
+
+  // 드롭다운
+  const pop = document.createElement("ul");
+  pop.className = "ac-popup";
+  pop.id = inputId + "_ac";
+  parent.appendChild(pop);
+
+  let activeIdx = -1;
+  let items = [];
+
+  const render = (keyword) => {
+    const all = getSuggestions(process, field);
+    const kw = (keyword || "").trim().toLowerCase();
+    items = kw
+      ? all.filter(v => v.toLowerCase().includes(kw))
+      : all;
+
+    if (!items.length) {
+      pop.classList.remove("show");
+      pop.innerHTML = "";
+      return;
+    }
+    pop.innerHTML = items.map((v,i)=>{
+      let display = v;
+      if (kw) {
+        const idx = v.toLowerCase().indexOf(kw);
+        if (idx >= 0) {
+          display =
+            v.substring(0, idx) +
+            `<mark>${v.substring(idx, idx + kw.length)}</mark>` +
+            v.substring(idx + kw.length);
+        }
+      }
+      return `<li data-idx="${i}" class="ac-item">${display}</li>`;
+    }).join("");
+    pop.classList.add("show");
+    activeIdx = -1;
+
+    pop.querySelectorAll(".ac-item").forEach(li => {
+      li.addEventListener("mousedown", e => {  // mousedown: blur 전에 실행
+        e.preventDefault();
+        el.value = items[+li.dataset.idx];
+        pop.classList.remove("show");
+      });
+      li.addEventListener("mouseenter", () => {
+        pop.querySelectorAll(".ac-item").forEach(x=>x.classList.remove("active"));
+        li.classList.add("active");
+        activeIdx = +li.dataset.idx;
+      });
+    });
+  };
+
+  el.addEventListener("focus", () => render(el.value));
+  el.addEventListener("input", () => render(el.value));
+
+  el.addEventListener("keydown", (e) => {
+    if (!pop.classList.contains("show")) return;
+    const lis = pop.querySelectorAll(".ac-item");
+    if (!lis.length) return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      activeIdx = (activeIdx + 1) % lis.length;
+      updateActive(lis);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      activeIdx = (activeIdx - 1 + lis.length) % lis.length;
+      updateActive(lis);
+    } else if (e.key === "Enter") {
+      if (activeIdx >= 0) {
+        e.preventDefault();
+        el.value = items[activeIdx];
+        pop.classList.remove("show");
+      }
+    } else if (e.key === "Escape") {
+      pop.classList.remove("show");
+    }
+  });
+
+  function updateActive(lis) {
+    lis.forEach(x=>x.classList.remove("active"));
+    if (activeIdx >= 0 && lis[activeIdx]) {
+      lis[activeIdx].classList.add("active");
+      lis[activeIdx].scrollIntoView({ block: "nearest" });
+    }
+  }
+
+  el.addEventListener("blur", () => {
+    setTimeout(() => pop.classList.remove("show"), 120);
+  });
+}
+
+/* =========================================================
+   앱 시작
+   ========================================================= */
 document.addEventListener("DOMContentLoaded", () => {
   initLogin();
   initMenu();
