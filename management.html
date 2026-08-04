@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>설비관리 - 설비관리 테스트V1</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <header class="top-header">
+        <div class="header-title">🔧 설비관리 테스트 V1 (기계1파트)</div>
+        <button class="logout-btn" onclick="logout()">로그아웃</button>
+    </header>
+
+    <nav class="main-nav">
+        <ul>
+            <li><a href="dashboard.html">📊 대시보드</a></li>
+            <li class="has-sub active">
+                <a href="#">🛢️ 급유급지관리 ▾</a>
+                <ul class="sub-menu">
+                    <li><a href="management.html?category=예비소성로">예비소성로</a></li>
+                    <li><a href="management.html?category=본소성">본소성</a></li>
+                    <li><a href="management.html?category=열처리">열처리</a></li>
+                    <li><a href="management.html?category=혼합설비">혼합설비</a></li>
+                    <li><a href="management.html?category=필터프레스">필터프레스</a></li>
+                    <li><a href="management.html?category=진공건조기">진공건조기</a></li>
+                    <li><a href="management.html?category=냉각기">냉각기</a></li>
+                    <li><a href="management.html?category=관리">📋 관리 (통합)</a></li>
+                </ul>
+            </li>
+            <li class="has-sub">
+                <a href="#">⚙️ 소모품이력관리 ▾</a>
+                <ul class="sub-menu">
+                    <li><a href="#">준비 중</a></li>
+                </ul>
+            </li>
+        </ul>
+    </nav>
+
+    <main class="management-main">
+        <h2 id="pageTitle">설비관리</h2>
+
+        <!-- 필터 영역 -->
+        <div class="filter-box">
+            <div class="filter-item">
+                <label>라인 필터</label>
+                <input type="text" id="filterLine" list="lineList" placeholder="라인 선택/입력">
+                <datalist id="lineList"></datalist>
+            </div>
+            <div class="filter-item">
+                <label>대상 필터</label>
+                <input type="text" id="filterTarget" list="targetList" placeholder="대상 선택/입력">
+                <datalist id="targetList"></datalist>
+            </div>
+            <div class="filter-item">
+                <label>포인트 필터</label>
+                <input type="text" id="filterPoint" list="pointList" placeholder="포인트 선택/입력">
+                <datalist id="pointList"></datalist>
+            </div>
+            <button class="filter-btn" onclick="applyFilter()">🔍 필터 적용</button>
+            <button class="filter-btn reset" onclick="resetFilter()">↻ 초기화</button>
+            <button class="filter-btn add" id="addRowBtn" onclick="addNewRow()">➕ 행 추가</button>
+        </div>
+
+        <!-- 데이터 테이블 -->
+        <div class="table-wrapper">
+            <table class="data-table" id="mainTable">
+                <thead>
+                    <tr id="tableHeader">
+                        <th>라인</th>
+                        <th>대상</th>
+                        <th>점검/급지 포인트</th>
+                        <th>주기(일)</th>
+                        <th>차회수리일자</th>
+                        <th>휴지</th>
+                        <th>1회차 일자</th>
+                        <th>1회차 사유</th>
+                        <th>작업</th>
+                    </tr>
+                </thead>
+                <tbody id="tableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- 자동완성용 datalist -->
+        <datalist id="lineOptions"></datalist>
+        <datalist id="targetOptions"></datalist>
+        <datalist id="pointOptions"></datalist>
+        <datalist id="reasonOptions">
+            <option value="정기점검">
+            <option value="급유">
+            <option value="급지">
+            <option value="교체">
+            <option value="설비고장">
+            <option value="휴무">
+        </datalist>
+    </main>
+    <script src="js/management.js"></script>
+</body>
+</html>
