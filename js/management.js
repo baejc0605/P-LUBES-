@@ -3,7 +3,6 @@ if (sessionStorage.getItem('isLoggedIn') !== 'true') {
     alert('로그인이 필요합니다.');
     window.location.href = 'index.html';
 }
-
 function logout() {
     if (confirm('로그아웃 하시겠습니까?')) {
         sessionStorage.removeItem('isLoggedIn');
@@ -13,7 +12,6 @@ function logout() {
 
 const CATEGORIES = ['예비소성로', '본소성', '열처리', '혼합설비', '필터프레스', '진공건조기', '냉각기'];
 
-// URL 파라미터에서 카테고리 추출
 const urlParams = new URLSearchParams(window.location.search);
 const category = urlParams.get('category') || '예비소성로';
 const isManageView = (category === '관리');
@@ -23,12 +21,19 @@ document.getElementById('pageTitle').textContent =
 
 if (isManageView) document.getElementById('addRowBtn').style.display = 'none';
 
-// 데이터 로드/저장
+// ===== 데이터 로드/저장 =====
 function loadData(cat) {
     return JSON.parse(localStorage.getItem('equipment_' + cat) || '[]');
 }
 function saveData(cat, data) {
     localStorage.setItem('equipment_' + cat, JSON.stringify(data));
+}
+function loadChecklists() {
+    return JSON.parse(localStorage.getItem('checklists') || '{}');
+}
+function getChecklistItems(line, target, point) {
+    const data = loadChecklists();
+    return data[`${line}|${target}|${point}`] || [];
 }
 
 let currentData = [];
@@ -49,14 +54,14 @@ function loadCurrentData() {
         const rounds = row.rounds || [];
         let lastFilledIdx = -1;
         rounds.forEach((r, i) => {
-            if (r && (r.date || r.reason)) lastFilledIdx = i;
+            if (r && (r.date || r.reason || (r.checks && Object.keys(r.checks).length))) lastFilledIdx = i;
         });
         const need = lastFilledIdx + 2;
         if (need > maxRounds) maxRounds = need;
     });
 }
 
-// ★ 주기 문자열 파싱 ("7D", "1M", "1Y" 등) → { num, unit }
+// ===== 주기 파싱/계산 =====
 function parseCycle(cycleStr) {
     if (!cycleStr) return null;
     const s = String(cycleStr).trim().toUpperCase();
@@ -64,44 +69,53 @@ function parseCycle(cycleStr) {
     if (!match) return null;
     return { num: parseInt(match[1]), unit: match[2] };
 }
-
-// ★ 주기 유효성 검사
 function validateCycle(cycleStr) {
-    if (!cycleStr) return true; // 빈 값은 허용
+    if (!cycleStr) return true;
     return parseCycle(cycleStr) !== null;
 }
-
-// ★ 날짜에 주기 더하기
 function addCycle(date, cycle) {
     const result = new Date(date);
-    if (cycle.unit === 'D') {
-        result.setDate(result.getDate() + cycle.num);
-    } else if (cycle.unit === 'M') {
-        result.setMonth(result.getMonth() + cycle.num);
-    } else if (cycle.unit === 'Y') {
-        result.setFullYear(result.getFullYear() + cycle.num);
-    }
+    if (cycle.unit === 'D') result.setDate(result.getDate() + cycle.num);
+    else if (cycle.unit === 'M') result.setMonth(result.getMonth() + cycle.num);
+    else if (cycle.unit === 'Y') result.setFullYear(result.getFullYear() + cycle.num);
     return result;
 }
 
-// 차회수리일자 계산
+// ===== 차회수리일자 계산 =====
+// - 마지막 회차의 체크박스가 모두 체크되어 있으면 → 주기대로 계산
+// - 하나라도 미체크면 → 마지막 회차 일자를 그대로 차회수리일자로 반환 (locked)
 function calcNextDate(row) {
     const cycle = parseCycle(row.cycle);
-    if (!cycle) return '';
-    
     const rounds = row.rounds || [];
-    let baseDate = null;
+    
+    // 가장 최근 일자 있는 회차 찾기
+    let lastRound = null;
+    let lastRoundIdx = -1;
     for (let i = rounds.length - 1; i >= 0; i--) {
         if (rounds[i] && rounds[i].date) {
-            baseDate = new Date(rounds[i].date);
+            lastRound = rounds[i];
+            lastRoundIdx = i;
             break;
         }
     }
-    if (!baseDate) return '';
+    if (!lastRound) return { date: '', locked: false };
     
-    let nextDate = addCycle(baseDate, cycle);
+    // 체크박스 항목 조회
+    const items = getChecklistItems(row.line, row.target, row.point);
+    const checks = lastRound.checks || {};
+    const hasUnchecked = items.some(item => !checks[item]);
     
-    // 휴지 기간이 예정일에 걸치면 휴지 종료일 다음날로 조정
+    // 하나라도 미체크 → 마지막 회차 일자 그대로
+    if (items.length > 0 && hasUnchecked) {
+        return { date: lastRound.date, locked: true };
+    }
+    
+    // 모두 체크(또는 항목 없음) → 주기대로 계산
+    if (!cycle) return { date: '', locked: false };
+    
+    let nextDate = addCycle(new Date(lastRound.date), cycle);
+    
+    // 휴지 기간 반영
     if (row.pauseStart && row.pauseEnd) {
         const pStart = new Date(row.pauseStart);
         const pEnd = new Date(row.pauseEnd);
@@ -111,10 +125,16 @@ function calcNextDate(row) {
         }
     }
     
-    return nextDate.toISOString().split('T')[0];
+    return { date: nextDate.toISOString().split('T')[0], locked: false };
 }
 
-// 테이블 헤더
+function refreshNextDate(row) {
+    const result = calcNextDate(row);
+    row.nextDate = result.date;
+    row.nextDateLocked = result.locked;
+}
+
+// ===== 렌더링 =====
 function renderHeader() {
     const thead = document.getElementById('tableHeader');
     let html = '';
@@ -125,13 +145,12 @@ function renderHeader() {
         <th>차회수리일자</th><th>휴지 (시작 ~ 종료)</th>
     `;
     for (let i = 1; i <= maxRounds; i++) {
-        html += `<th>${i}회차 일자</th><th>${i}회차 사유</th>`;
+        html += `<th>${i}회차<br><small>(일자/사유/체크)</small></th>`;
     }
     if (!isManageView) html += '<th>작업</th>';
     thead.innerHTML = html;
 }
 
-// 테이블 바디
 function renderBody(filterData = null) {
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = '';
@@ -141,38 +160,55 @@ function renderBody(filterData = null) {
         const tr = document.createElement('tr');
         tr.dataset.idx = idx;
         tr.onclick = function(e) {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT') return;
+            const tag = e.target.tagName;
+            if (tag === 'INPUT' || tag === 'BUTTON' || tag === 'LABEL' || tag === 'SELECT') return;
             document.querySelectorAll('#tableBody tr').forEach(r => r.classList.remove('selected'));
             this.classList.add('selected');
         };
         
+        const items = getChecklistItems(row.line, row.target, row.point);
+        
         let html = '';
         if (isManageView) {
+            // 조회 전용
             html += `<td>${row._category || ''}</td>`;
             const pauseStr = (row.pauseStart || row.pauseEnd) 
                 ? `${row.pauseStart || '?'} ~ ${row.pauseEnd || '?'}` : '';
+            const nextClass = row.nextDateLocked ? 'next-date-display locked' : 'next-date-display';
             html += `
                 <td>${row.line || ''}</td>
                 <td>${row.target || ''}</td>
                 <td>${row.point || ''}</td>
                 <td>${row.cycle || ''}</td>
-                <td><span class="next-date-display">${row.nextDate || '-'}</span></td>
+                <td><span class="${nextClass}">${row.nextDate || '-'}</span></td>
                 <td>${pauseStr}</td>
             `;
             for (let i = 0; i < maxRounds; i++) {
                 const r = (row.rounds || [])[i] || {};
-                html += `<td>${r.date || ''}</td><td>${r.reason || ''}</td>`;
+                const checks = r.checks || {};
+                const chkHtml = items.map(item => 
+                    `<span class="chk-tag ${checks[item] ? 'checked' : 'unchecked'}">${checks[item] ? '✓' : '✗'} ${item}</span>`
+                ).join(' ');
+                html += `<td>
+                    <div style="font-weight:bold;">${r.date || ''}</div>
+                    <div style="color:#666;font-size:12px;">${r.reason || ''}</div>
+                    <div style="margin-top:5px;">${chkHtml}</div>
+                </td>`;
             }
         } else {
+            // 편집 가능
             const cycleValid = validateCycle(row.cycle);
+            const nextClass = row.nextDateLocked ? 'next-date-display locked' : 'next-date-display';
+            const nextTitle = row.nextDateLocked ? '체크박스 미체크 항목이 있어 마지막 회차 일자로 고정됨' : '';
+            
             html += `
                 <td><input type="text" list="lineOptions" value="${row.line || ''}" placeholder="라인" onchange="updateField(${idx},'line',this.value)"></td>
                 <td><input type="text" list="targetOptions" value="${row.target || ''}" placeholder="대상" onchange="updateField(${idx},'target',this.value)"></td>
                 <td><input type="text" list="pointOptions" value="${row.point || ''}" placeholder="포인트" onchange="updateField(${idx},'point',this.value)"></td>
-                <td><input type="text" list="cycleOptions" value="${row.cycle || ''}" placeholder="예:7D,1M,1Y" 
+                <td><input type="text" list="cycleOptions" value="${row.cycle || ''}" placeholder="예:7D,1M" 
                     class="${!cycleValid ? 'invalid-input' : ''}" 
                     onchange="updateCycle(${idx}, this)" style="min-width:80px;max-width:100px;"></td>
-                <td><span class="next-date-display">${row.nextDate || '-'}</span></td>
+                <td><span class="${nextClass}" title="${nextTitle}">${row.nextDate || '-'}${row.nextDateLocked ? ' 🔒' : ''}</span></td>
                 <td>
                     <div class="pause-cell">
                         <input type="date" value="${row.pauseStart || ''}" onchange="updateField(${idx},'pauseStart',this.value)" title="휴지 시작일">
@@ -181,13 +217,34 @@ function renderBody(filterData = null) {
                     </div>
                 </td>
             `;
+            
             for (let i = 0; i < maxRounds; i++) {
                 const r = (row.rounds || [])[i] || {};
-                html += `
-                    <td><input type="date" value="${r.date || ''}" onchange="updateRound(${idx},${i},'date',this.value)"></td>
-                    <td><input type="text" list="reasonOptions" value="${r.reason || ''}" placeholder="정기/돌발" onchange="updateRound(${idx},${i},'reason',this.value)"></td>
-                `;
+                const checks = r.checks || {};
+                
+                let chkListHtml = '';
+                if (items.length === 0) {
+                    chkListHtml = `<div class="checkbox-list-title">※ 체크박스 항목 미등록<br>(체크박스 항목 관리에서 등록)</div>`;
+                } else {
+                    chkListHtml = '<div class="checkbox-list">' + items.map(item => `
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="chk_${idx}_${i}_${item}" 
+                                ${checks[item] ? 'checked' : ''} 
+                                onchange="updateCheck(${idx},${i},'${item.replace(/'/g,"\\'")}',this.checked)">
+                            <label for="chk_${idx}_${i}_${item}">${item}</label>
+                        </div>
+                    `).join('') + '</div>';
+                }
+                
+                html += `<td>
+                    <div class="round-cell">
+                        <input type="date" value="${r.date || ''}" onchange="updateRound(${idx},${i},'date',this.value)">
+                        <input type="text" list="reasonOptions" value="${r.reason || ''}" placeholder="정기/돌발" onchange="updateRound(${idx},${i},'reason',this.value)">
+                        ${chkListHtml}
+                    </div>
+                </td>`;
             }
+            
             html += `<td><button class="del-btn" onclick="deleteRow(${idx})">삭제</button></td>`;
         }
         
@@ -196,52 +253,57 @@ function renderBody(filterData = null) {
     });
 }
 
-// ★ 주기 업데이트 (유효성 검사 포함)
+// ===== 업데이트 함수들 =====
 function updateCycle(idx, inputEl) {
     const value = inputEl.value.trim().toUpperCase();
     if (value && !validateCycle(value)) {
-        alert('주기 형식이 올바르지 않습니다.\n\n올바른 예시:\n • 7D (7일)\n • 1M (1개월)\n • 1Y (1년)\n • 3M (3개월)');
+        alert('주기 형식이 올바르지 않습니다.\n\n올바른 예시:\n • 7D (7일)\n • 1M (1개월)\n • 1Y (1년)');
         inputEl.value = currentData[idx].cycle || '';
         inputEl.focus();
         return;
     }
     currentData[idx].cycle = value;
-    currentData[idx].nextDate = calcNextDate(currentData[idx]);
+    refreshNextDate(currentData[idx]);
     saveData(category, currentData);
     renderBody();
     updateDatalists();
 }
 
-// 필드 업데이트
 function updateField(idx, field, value) {
     currentData[idx][field] = value;
-    currentData[idx].nextDate = calcNextDate(currentData[idx]);
+    refreshNextDate(currentData[idx]);
     saveData(category, currentData);
     renderBody();
     updateDatalists();
 }
 
-// 회차 업데이트
 function updateRound(idx, roundIdx, field, value) {
     if (!currentData[idx].rounds) currentData[idx].rounds = [];
     if (!currentData[idx].rounds[roundIdx]) currentData[idx].rounds[roundIdx] = {};
     currentData[idx].rounds[roundIdx][field] = value;
-    currentData[idx].nextDate = calcNextDate(currentData[idx]);
+    refreshNextDate(currentData[idx]);
     saveData(category, currentData);
-    
     loadCurrentData();
     renderHeader();
     renderBody();
 }
 
-// 행 추가
-function addNewRow() {
-    currentData.push({ line:'', target:'', point:'', cycle:'', nextDate:'', pauseStart:'', pauseEnd:'', rounds: [] });
+function updateCheck(idx, roundIdx, item, checked) {
+    if (!currentData[idx].rounds) currentData[idx].rounds = [];
+    if (!currentData[idx].rounds[roundIdx]) currentData[idx].rounds[roundIdx] = {};
+    if (!currentData[idx].rounds[roundIdx].checks) currentData[idx].rounds[roundIdx].checks = {};
+    currentData[idx].rounds[roundIdx].checks[item] = checked;
+    refreshNextDate(currentData[idx]);
     saveData(category, currentData);
     renderBody();
 }
 
-// 행 삭제
+function addNewRow() {
+    currentData.push({ line:'', target:'', point:'', cycle:'', nextDate:'', nextDateLocked:false, pauseStart:'', pauseEnd:'', rounds: [] });
+    saveData(category, currentData);
+    renderBody();
+}
+
 function deleteRow(idx) {
     if (confirm('이 행을 삭제하시겠습니까?')) {
         currentData.splice(idx, 1);
@@ -252,7 +314,6 @@ function deleteRow(idx) {
     }
 }
 
-// datalist 업데이트
 function updateDatalists() {
     const lines = [...new Set(currentData.map(r => r.line).filter(Boolean))];
     const targets = [...new Set(currentData.map(r => r.target).filter(Boolean))];
@@ -266,14 +327,12 @@ function updateDatalists() {
     document.getElementById('targetList').innerHTML = targets.map(v => `<option value="${v}">`).join('');
     document.getElementById('pointList').innerHTML = points.map(v => `<option value="${v}">`).join('');
     
-    // 주기 자동완성 (기본 예시 + 기존 입력값)
     const defaultCycles = ['1D', '3D', '7D', '14D', '1M', '3M', '6M', '1Y'];
     const allCycles = [...new Set([...defaultCycles, ...cycles])];
     const cycleOptEl = document.getElementById('cycleOptions');
     if (cycleOptEl) cycleOptEl.innerHTML = allCycles.map(v => `<option value="${v}">`).join('');
 }
 
-// 필터
 function applyFilter() {
     const fLine = document.getElementById('filterLine').value.toLowerCase();
     const fTarget = document.getElementById('filterTarget').value.toLowerCase();
@@ -296,6 +355,9 @@ function resetFilter() {
 
 // 초기 로드
 loadCurrentData();
+// 페이지 로드 시 기존 데이터의 차회수리일자 재계산 (체크박스 규칙 반영)
+currentData.forEach(row => refreshNextDate(row));
+if (!isManageView) saveData(category, currentData);
 renderHeader();
 renderBody();
 updateDatalists();
