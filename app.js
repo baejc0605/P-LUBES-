@@ -1,6 +1,6 @@
 /* =========================================================
    설비관리V1(기계1파트) - Vanilla JS SPA
-   - 예비소성로 페이지 개편 (컬럼 정리 + 좌측 sticky)
+   - 예비소성로: 비고 컬럼 제거, sticky 정렬 재조정
    ========================================================= */
 
 /* ---------- 상수 ---------- */
@@ -392,7 +392,7 @@ function renderProcessPage(container, process) {
   container.innerHTML = `
     <div class="section-title">🔧 ${process} 급유급지 점검 현황</div>
 
-    <!-- ▼ 인라인 빠른 추가 폼 (점검 제거, 점검/급지포인트로 변경) -->
+    <!-- ▼ 인라인 빠른 추가 폼 (비고는 폼에는 남김, 표에는 X) -->
     <div id="quickAddForm">
       <div><label>라인</label><input id="q_line" placeholder="예: A라인" autocomplete="off"/></div>
       <div><label>대상</label><input id="q_target" placeholder="대상 설비" autocomplete="off"/></div>
@@ -419,7 +419,7 @@ function renderProcessPage(container, process) {
       </table>
     </div>
 
-    <!-- ▼ 추가/수정 모달 (점검 제거) -->
+    <!-- ▼ 추가/수정 모달 -->
     <div id="rowModal" class="modal-overlay hidden">
       <div class="modal" style="width:480px;">
         <h2 id="rowModalTitle" style="text-align:center;color:#1a3a6c;margin-bottom:18px;">행 추가</h2>
@@ -485,7 +485,7 @@ function renderProcessPage(container, process) {
   renderProcessRows(process, { rebuildHead:true });
 }
 
-/* ---------- 빠른 추가 (점검 제거) ---------- */
+/* ---------- 빠른 추가 ---------- */
 function quickAdd(process) {
   const row = {
     id: uid(),
@@ -513,7 +513,7 @@ function quickAdd(process) {
 }
 
 /* =========================================================
-   행 추가/수정 모달 (점검 제거)
+   행 추가/수정 모달
    ========================================================= */
 function openRowModal(process, id) {
   document.getElementById("rowModal").classList.remove("hidden");
@@ -679,7 +679,10 @@ function buildRowsData(process) {
 }
 
 /* =========================================================
-   테이블 렌더 (thead 유지 / tbody 부분 렌더)
+   테이블 렌더 (비고 컬럼 제거 → 고정컬럼 6개)
+   고정 순서: 라인(90) · 대상(140) · 점검/급지포인트(200) ·
+              주기(70)  · 차회수리일자(120) · 휴지(150)
+   합계: 770px  → 그 다음부터 회차/관리 컬럼(스크롤 영역)
    ========================================================= */
 function renderProcessRows(process, opts = {}) {
   const thead = document.getElementById("processThead");
@@ -703,13 +706,12 @@ function renderThead(process, roundsCnt) {
 
   thead.innerHTML = `
     <tr>
-      <th class="col-line sticky-col sticky-1">라인</th>
+      <th class="col-line   sticky-col sticky-1">라인</th>
       <th class="col-target sticky-col sticky-2">대상</th>
-      <th class="col-point sticky-col sticky-3">점검/급지포인트</th>
-      <th class="col-cycle sticky-col sticky-4">주기</th>
-      <th class="col-remark sticky-col sticky-5">비고</th>
-      <th class="col-next sticky-col sticky-6">차회수리일자</th>
-      <th class="col-pause sticky-col sticky-7 sticky-last">휴지</th>
+      <th class="col-point  sticky-col sticky-3">점검/급지포인트</th>
+      <th class="col-cycle  sticky-col sticky-4">주기</th>
+      <th class="col-next   sticky-col sticky-5">차회수리일자</th>
+      <th class="col-pause  sticky-col sticky-6 sticky-last">휴지</th>
       ${roundHeaders}
       <th class="col-mgr">관리</th>
     </tr>
@@ -718,9 +720,8 @@ function renderThead(process, roundsCnt) {
       <th class="sticky-col sticky-2"><input data-f="target" placeholder="검색" value="${escapeHtml(state.filters.target||"")}"/></th>
       <th class="sticky-col sticky-3"><input data-f="point"  placeholder="검색" value="${escapeHtml(state.filters.point||"")}"/></th>
       <th class="sticky-col sticky-4"><input data-f="cycle"  placeholder="검색" value="${escapeHtml(state.filters.cycle||"")}"/></th>
-      <th class="sticky-col sticky-5"><input data-f="remark" placeholder="검색" value="${escapeHtml(state.filters.remark||"")}"/></th>
-      <th class="sticky-col sticky-6"></th>
-      <th class="sticky-col sticky-7 sticky-last"></th>
+      <th class="sticky-col sticky-5"></th>
+      <th class="sticky-col sticky-6 sticky-last"></th>
       <th colspan="${roundsCnt + 1}"></th>
     </tr>
   `;
@@ -745,8 +746,8 @@ function renderThead(process, roundsCnt) {
 
 function renderTbody(rows, roundsCnt) {
   const tbody = document.getElementById("processTbody");
-  // 컬럼 총 개수: 7(고정) + roundsCnt + 1(관리)
-  const totalCols = 8 + roundsCnt;
+  // 컬럼 총 개수: 6(고정) + roundsCnt + 1(관리) = 7 + roundsCnt
+  const totalCols = 7 + roundsCnt;
   if (!rows.length) {
     tbody.innerHTML = `<tr class="empty-row"><td colspan="${totalCols}" style="padding:20px;color:#888;text-align:center;">검색 결과가 없습니다.</td></tr>`;
     return;
@@ -771,13 +772,12 @@ function renderTbody(rows, roundsCnt) {
 
     return `
       <tr data-row="${r.id}" class="${rowClass}">
-        <td class="col-line sticky-col sticky-1">${escapeHtml(r.line)}</td>
+        <td class="col-line   sticky-col sticky-1">${escapeHtml(r.line)}</td>
         <td class="col-target sticky-col sticky-2">${escapeHtml(r.target)}</td>
-        <td class="col-point sticky-col sticky-3">${escapeHtml(r.point)}</td>
-        <td class="col-cycle sticky-col sticky-4">${escapeHtml(r.cycle)}</td>
-        <td class="col-remark sticky-col sticky-5">${escapeHtml(r.remark)}</td>
-        <td class="col-next sticky-col sticky-6 next-date-ok">${r.nextDate || "-"}</td>
-        <td class="col-pause sticky-col sticky-7 sticky-last">
+        <td class="col-point  sticky-col sticky-3">${escapeHtml(r.point)}</td>
+        <td class="col-cycle  sticky-col sticky-4">${escapeHtml(r.cycle)}</td>
+        <td class="col-next   sticky-col sticky-5 next-date-ok">${r.nextDate || "-"}</td>
+        <td class="col-pause  sticky-col sticky-6 sticky-last">
           <button class="btn btn-sm ${pauseBtnClass}" onclick="openPauseModal('${r.id}')">${pauseBtnLabel}</button>
         </td>
         ${roundCells}
