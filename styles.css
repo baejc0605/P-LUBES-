@@ -602,3 +602,272 @@ tbody tr:hover { background: #eef4fc; }
 .table-wrap::-webkit-scrollbar { height: 10px; }
 .table-wrap::-webkit-scrollbar-thumb { background: #ccd3dd; border-radius: 5px; }
 .table-wrap::-webkit-scrollbar-track { background: #f5f7fa; }
+
+/* =========================================================
+   [공정 페이지] 인라인 빠른 추가 폼 (점검 제거 → 5필드+버튼)
+   ========================================================= */
+#quickAddForm {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr) auto;
+  gap: 14px 16px;
+  align-items: end;
+  padding: 16px 20px;
+  background: #fbfffb;
+  border: 1px solid #d4edda;
+  border-left: 4px solid #2ecc71;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+  margin-bottom: 14px;
+}
+#quickAddForm > div {
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 6px;
+  min-width: 0;
+}
+#quickAddForm label {
+  display: block;
+  font-size: 12px;
+  font-weight: 700;
+  color: #27ae60;
+  line-height: 1.2;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+#quickAddForm input {
+  width: 100%;
+  height: 34px;
+  padding: 6px 10px;
+  border: 1px solid #ccd3dd;
+  border-radius: 6px;
+  font-size: 13px;
+  background: #fff;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+#quickAddForm input:focus {
+  border-color: #27ae60;
+  box-shadow: 0 0 0 2px rgba(39, 174, 96, 0.15);
+}
+#btnQuickAdd {
+  height: 34px;
+  padding: 0 18px;
+  background: #27ae60;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border: none;
+  border-radius: 6px;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+#btnQuickAdd:hover { background: #1e8449; }
+
+@media (max-width: 1400px) {
+  #quickAddForm { grid-template-columns: repeat(3, 1fr); }
+  #quickAddForm > div:last-child { grid-column: 1 / -1; }
+  #btnQuickAdd { width: 100%; }
+}
+@media (max-width: 768px) {
+  #quickAddForm { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* =========================================================
+   [공정 페이지] 테이블 - 좌측 고정 + 우측 회차 스크롤
+   ========================================================= */
+
+/* 스크롤 컨테이너 */
+.sticky-wrap {
+  overflow-x: auto;
+  overflow-y: visible;
+  border-radius: 6px;
+  border: 1px solid #e0e6ed;
+  background: #fff;
+  position: relative;
+}
+.sticky-wrap::-webkit-scrollbar { height: 10px; }
+.sticky-wrap::-webkit-scrollbar-thumb { background: #ccd3dd; border-radius: 5px; }
+.sticky-wrap::-webkit-scrollbar-track { background: #f5f7fa; }
+
+/* 테이블 자체 */
+.sticky-table {
+  width: max-content;             /* 회차가 늘어나도 오른쪽으로 확장 */
+  min-width: 100%;
+  border-collapse: separate;      /* sticky용 */
+  border-spacing: 0;
+  background: #fff;
+}
+
+/* 열 폭 지정 (고정 컬럼) */
+.sticky-table .col-line   { width: 90px;  min-width: 90px;  }
+.sticky-table .col-target { width: 140px; min-width: 140px; }
+.sticky-table .col-point  { width: 200px; min-width: 200px; }
+.sticky-table .col-cycle  { width: 70px;  min-width: 70px;  }
+.sticky-table .col-remark { width: 140px; min-width: 140px; }
+.sticky-table .col-next   { width: 120px; min-width: 120px; }
+.sticky-table .col-pause  { width: 150px; min-width: 150px; }
+.sticky-table .col-round  { width: 190px; min-width: 190px; }
+.sticky-table .col-mgr    { width: 130px; min-width: 130px; }
+
+/* 헤더 공통 */
+.sticky-table thead tr:first-child th {
+  height: 42px;
+  background: #1a3a6c;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  border-right: 1px solid #16305a;
+  border-bottom: 1px solid #16305a;
+  padding: 6px 8px;
+  text-align: center;
+  vertical-align: middle;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+/* 필터행 헤더 */
+.sticky-table thead .filter-row th {
+  height: 38px;
+  background: #f5f7fa;
+  padding: 4px 6px;
+  border-right: 1px solid #e0e6ed;
+  border-bottom: 1px solid #e0e6ed;
+  position: sticky;
+  top: 42px;                       /* 첫 헤더 높이만큼 아래 */
+  z-index: 4;
+}
+.sticky-table thead .filter-row input {
+  width: 100%;
+  height: 28px;
+  padding: 2px 8px;
+  border: 1px solid #ccd3dd;
+  border-radius: 4px;
+  font-size: 12px;
+  background: #fff;
+  color: #333;
+  box-sizing: border-box;
+  outline: none;
+}
+.sticky-table thead .filter-row input:focus {
+  border-color: #1a3a6c;
+  box-shadow: 0 0 0 2px rgba(26, 58, 108, 0.15);
+}
+.sticky-table thead .filter-row input::placeholder {
+  color: #aab2bd;
+  font-size: 12px;
+}
+
+/* 본문 셀 공통 */
+.sticky-table tbody td {
+  height: 44px;
+  padding: 6px 8px;
+  vertical-align: middle;
+  text-align: center;
+  border-right: 1px solid #e0e6ed;
+  border-bottom: 1px solid #e0e6ed;
+  font-size: 13px;
+  color: #333;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  box-sizing: border-box;
+  background: #fff;
+}
+
+/* 회차 셀 (2단) */
+.sticky-table tbody td.col-round {
+  height: 72px;
+  white-space: normal;
+  padding: 6px;
+}
+.round-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.round-cell input {
+  width: 100%;
+  height: 26px;
+  padding: 2px 6px;
+  border: 1px solid #ccd3dd;
+  border-radius: 4px;
+  font-size: 12px;
+  box-sizing: border-box;
+  outline: none;
+}
+.round-cell input:focus {
+  border-color: #1a3a6c;
+  box-shadow: 0 0 0 2px rgba(26, 58, 108, 0.12);
+}
+
+/* ─────────────────────────────────────────
+   ★ Sticky 좌측 고정 컬럼 (라인 ~ 휴지 = 7개)
+   ───────────────────────────────────────── */
+.sticky-table .sticky-col {
+  position: sticky;
+  z-index: 2;
+  background: #fff;
+}
+/* thead 의 sticky-col 은 z-index 더 높게 */
+.sticky-table thead .sticky-col { z-index: 6; }
+.sticky-table thead .filter-row.sticky-col,
+.sticky-table thead .filter-row th.sticky-col { z-index: 5; }
+
+/* 각 컬럼의 left 위치 (누적 폭) */
+.sticky-table .sticky-1 { left: 0;    }              /* 라인 90 */
+.sticky-table .sticky-2 { left: 90px; }              /* 대상 140 → 90 */
+.sticky-table .sticky-3 { left: 230px; }             /* 점검/급지 200 → 90+140 */
+.sticky-table .sticky-4 { left: 430px; }             /* 주기 70  → 90+140+200 */
+.sticky-table .sticky-5 { left: 500px; }             /* 비고 140 → 위+70 */
+.sticky-table .sticky-6 { left: 640px; }             /* 차회수리 120 → 위+140 */
+.sticky-table .sticky-7 { left: 760px; }             /* 휴지 150 → 위+120 */
+
+/* 고정 영역 마지막 컬럼(휴지) 오른쪽에 구분 그림자 */
+.sticky-table .sticky-last {
+  border-right: 2px solid #1a3a6c !important;
+  box-shadow: 4px 0 6px -3px rgba(0,0,0,0.15);
+}
+
+/* 짝수/홀수/휴지 행 배경 (sticky 셀에도 동일하게 적용) */
+.sticky-table tbody tr:nth-child(even) td { background: #fafbfc; }
+.sticky-table tbody tr.paused-row td { background: #fff8e5 !important; }
+
+/* 검색 결과 없음 */
+.sticky-table tr.empty-row td {
+  height: auto;
+  white-space: normal;
+  background: #fafbfc;
+  color: #888;
+  text-align: center;
+}
+
+/* 차회수리일자 강조 */
+.next-date-ok   { color: #1a3a6c; font-weight: 700; }
+.next-date-warn { color: #e67e22; font-weight: 700; }
+
+/* 휴지 버튼 색상 */
+.btn-warn {
+  background: #f39c12;
+  color: #fff;
+  border: none;
+}
+.btn-warn:hover { background: #d78610; }
+.btn-ghost-dark {
+  background: #fff;
+  color: #555;
+  border: 1px solid #ccd3dd;
+}
+.btn-ghost-dark:hover { background: #f0f2f5; }
+
+/* 관리 버튼 셀 */
+.sticky-table td.col-mgr { white-space: nowrap; }
+.sticky-table td.col-mgr .btn { margin: 0 2px; }
+
