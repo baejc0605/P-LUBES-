@@ -2,13 +2,13 @@
    설비관리V1(기계1파트) - Vanilla JS SPA
    ========================================================= */
 
-/* ---------- 상수 & 초기 설정 ---------- */
+/* ---------- 상수 ---------- */
 const AUTH = { id: "1004", pw: "1005" };
-const STORAGE_KEY = "eqmt_master_v1";     // 마스터 데이터
-const RECORD_KEY  = "eqmt_records_v1";    // 회차 기록 데이터
+const STORAGE_KEY = "eqmt_master_v1";
+const RECORD_KEY  = "eqmt_records_v1";
+const PAUSE_KEY   = "eqmt_pauses_v1";     // 휴지 기간 데이터
 const SESSION_KEY = "eqmt_session";
 
-// 공휴일(예시). 필요시 확장/수정.
 const HOLIDAYS = [
   "2025-01-01","2025-03-01","2025-05-05","2025-06-06","2025-08-15",
   "2025-10-03","2025-10-09","2025-12-25",
@@ -17,7 +17,7 @@ const HOLIDAYS = [
 ];
 
 const SUB_MENUS = ["예비소성로","본소성","열처리","혼합설비","필터프레스","진공건조기","냉각기","관리메뉴"];
-const MIN_ROUNDS = 4;   // 최소 표시 회차 (4까지는 기본으로 보이게)
+const MIN_ROUNDS = 4;
 
 let state = {
   currentMenu: "home",
@@ -27,17 +27,19 @@ let state = {
   dateTo: ""
 };
 
-/* ---------- 유틸: 데이터 CRUD ---------- */
+/* ---------- 저장/조회 ---------- */
 function loadMaster()      { return JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]"); }
-function saveMaster(data)  { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); }
+function saveMaster(d)     { localStorage.setItem(STORAGE_KEY, JSON.stringify(d)); }
 function loadRecords()     { return JSON.parse(localStorage.getItem(RECORD_KEY) || "{}"); }
-function saveRecords(data) { localStorage.setItem(RECORD_KEY, JSON.stringify(data)); }
+function saveRecords(d)    { localStorage.setItem(RECORD_KEY, JSON.stringify(d)); }
+function loadPauses()      { return JSON.parse(localStorage.getItem(PAUSE_KEY) || "{}"); }
+function savePauses(d)     { localStorage.setItem(PAUSE_KEY, JSON.stringify(d)); }
 function uid() { return "id_" + Date.now() + "_" + Math.random().toString(36).slice(2,7); }
 
-/* ---------- 유틸: 날짜 계산 ---------- */
-function parseDate(str) {
-  if (!str) return null;
-  const d = new Date(str);
+/* ---------- 날짜 유틸 ---------- */
+function parseDate(s) {
+  if (!s) return null;
+  const d = new Date(s);
   return isNaN(d) ? null : d;
 }
 function fmt(d) {
@@ -62,17 +64,45 @@ function parseCycle(cycle) {
   if (!m) return null;
   return { value: parseInt(m[1],10), unit: m[2] };
 }
-function calcNextDate(lastDateStr, cycleStr) {
+/* 두 날짜 사이의 일수 (양쪽 포함) */
+function diffDays(a, b) {
+  const ms = 1000*60*60*24;
+  return Math.floor((b.getTime() - a.getTime()) / ms) + 1;
+}
+/**
+ * 차회수리일자 계산 (휴지기간 반영)
+ * = 마지막 회차일자 + 주기 + 휴지기간(마지막 회차일자 이후에 해당하는 일수) → 영업일 이월
+ */
+function calcNextDate(lastDateStr, cycleStr, pauses) {
   const base = parseDate(lastDateStr);
   const cyc  = parseCycle(cycleStr);
   if (!base || !cyc) return "";
+
   const d = new Date(base);
   if (cyc.unit === "M") d.setMonth(d.getMonth() + cyc.value);
   else                  d.setDate(d.getDate() + cyc.value);
+
+  // 휴지기간 추가 (마지막 회차일자 이후 & 현재 계산된 차회일자 이전까지의 휴지일수를 밀어냄)
+  if (pauses && pauses.length) {
+    let pauseDays = 0;
+    pauses.forEach(p => {
+      const ps = parseDate(p.start);
+      const pe = parseDate(p.end);
+      if (!ps || !pe) return;
+      // 마지막 회차일자 이후 영역만 적용
+      const effStart = ps > base ? ps : new Date(base.getTime() + 86400000);
+      const effEnd   = pe;
+      if (effEnd >= effStart) {
+        pauseDays += diffDays(effStart, effEnd);
+      }
+    });
+    if (pauseDays > 0) d.setDate(d.getDate() + pauseDays);
+  }
+
   return fmt(nextBusinessDay(d));
 }
 
-/* ---------- 로그인 처리 ---------- */
+/* ---------- 로그인 ---------- */
 function initLogin() {
   const modal = document.getElementById("loginModal");
   const app   = document.getElementById("app");
@@ -107,7 +137,7 @@ function logout() {
   location.reload();
 }
 
-/* ---------- 메뉴 이벤트 ---------- */
+/* ---------- 메뉴 ---------- */
 function initMenu() {
   document.querySelectorAll(".gnb-item").forEach(el => {
     el.addEventListener("click", e => {
@@ -146,7 +176,7 @@ function initMenu() {
   document.getElementById("btnLogout").addEventListener("click", logout);
 }
 
-/* ---------- 페이지 라우팅 ---------- */
+/* ---------- 라우팅 ---------- */
 function renderPage() {
   const c = document.getElementById("content");
   c.innerHTML = "";
@@ -158,10 +188,11 @@ function renderPage() {
   }
 }
 
-/* ---------- HOME (대시보드) ---------- */
+/* ---------- HOME ---------- */
 function renderHome(container) {
   const master = loadMaster();
   const records = loadRecords();
+  const pauses = loadPauses();
 
   const now = new Date();
   const ymNow = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,"0")}`;
@@ -171,7 +202,7 @@ function renderHome(container) {
     const recs = (records[row.id] || []).filter(r => r.date);
     const lastDate = recs.length ? recs[recs.length-1].date : "";
     if (lastDate && lastDate.startsWith(ymNow)) doneCnt++;
-    const nd = calcNextDate(lastDate, row.cycle);
+    const nd = calcNextDate(lastDate, row.cycle, pauses[row.id] || []);
     if (nd) nextList.push({ ...row, nextDate: nd });
   });
   nextList.sort((a,b)=> a.nextDate.localeCompare(b.nextDate));
@@ -227,7 +258,7 @@ function renderHome(container) {
   `;
 }
 
-/* ---------- 관리메뉴 (마스터 CRUD) ---------- */
+/* ---------- 관리메뉴 ---------- */
 function renderAdmin(container) {
   container.innerHTML = `
     <div class="section-title">🛠 급유급지 마스터 관리 (전체 공정)</div>
@@ -292,7 +323,6 @@ function renderMasterTable() {
     </tr>
   `).join("");
 }
-
 function saveMasterRow() {
   const row = {
     id:      document.getElementById("m_id").value || uid(),
@@ -315,12 +345,10 @@ function saveMasterRow() {
   clearMasterForm();
   renderMasterTable();
 }
-
 function clearMasterForm() {
   ["m_id","m_line","m_target","m_inspect","m_point","m_cycle","m_remark"]
     .forEach(id => document.getElementById(id).value = "");
 }
-
 window.editMaster = function(id) {
   const row = loadMaster().find(x=>x.id===id);
   if (!row) return;
@@ -335,44 +363,34 @@ window.editMaster = function(id) {
   window.scrollTo({top:0, behavior:"smooth"});
 };
 window.deleteMaster = function(id) {
-  if (!confirm("삭제하시겠습니까? 관련 회차 기록도 함께 삭제됩니다.")) return;
+  if (!confirm("삭제하시겠습니까? 관련 회차·휴지 기록도 함께 삭제됩니다.")) return;
   saveMaster(loadMaster().filter(x=>x.id!==id));
-  const recs = loadRecords();
-  delete recs[id];
-  saveRecords(recs);
-  renderMasterTable();
+  const recs = loadRecords(); delete recs[id]; saveRecords(recs);
+  const pss  = loadPauses();  delete pss[id];  savePauses(pss);
+  if (state.currentSub && state.currentSub !== "관리메뉴") {
+    renderProcessRows(state.currentSub);
+  } else {
+    renderMasterTable();
+  }
 };
 
 /* =========================================================
-   공정별 페이지 (인라인 신규추가 + 회차 자동 확장)
+   공정별 페이지
    ========================================================= */
 function renderProcessPage(container, process) {
   container.innerHTML = `
     <div class="section-title">🔧 ${process} 급유급지 점검 현황</div>
 
-    <!-- ▼ 인라인 신규 등록 폼 (해당 공정으로 바로 저장) -->
-    <div class="form-grid" id="quickAddForm">
-      <div><label>라인</label><input id="q_line" placeholder="예: A라인"/></div>
-      <div><label>대상</label><input id="q_target" placeholder="대상 설비"/></div>
-      <div><label>점검</label><input id="q_inspect" placeholder="점검항목"/></div>
-      <div><label>급지포인트</label><input id="q_point" placeholder="포인트"/></div>
-      <div><label>주기 (예: 6M, 10D)</label><input id="q_cycle" placeholder="6M"/></div>
-      <div><label>비고</label><input id="q_remark" placeholder="비고"/></div>
-      <div style="display:flex;align-items:end;gap:6px;">
-        <button class="btn btn-primary" id="btnQuickAdd">＋ ${process}에 추가</button>
-      </div>
-    </div>
-
     <div class="toolbar">
-      <label>차회수리일자</label>
+      <button class="btn btn-primary" id="btnAddRow">＋ 행 추가</button>
+      <span style="color:#888;font-size:12px;">신규 급유·급지 포인트를 이 공정에 바로 추가합니다.</span>
+
+      <label style="margin-left:20px;">차회수리일자</label>
       <input type="date" id="dateFrom" value="${state.dateFrom}"/>
       <span>~</span>
       <input type="date" id="dateTo" value="${state.dateTo}"/>
       <button class="btn btn-sm btn-primary" id="btnFilterDate">기간조회</button>
       <button class="btn btn-sm btn-ghost" style="color:#333;border-color:#ccd3dd;" id="btnResetFilter">초기화</button>
-      <span style="margin-left:auto;font-size:12px;color:#888;">
-        ※ 마지막 회차에 일자 입력 → 자동 저장 & 다음 회차 열이 생성됩니다.
-      </span>
     </div>
 
     <div class="table-wrap">
@@ -381,12 +399,58 @@ function renderProcessPage(container, process) {
         <tbody id="processTbody"></tbody>
       </table>
     </div>
+
+    <!-- ▼ 추가/수정 모달 -->
+    <div id="rowModal" class="modal-overlay hidden">
+      <div class="modal" style="width:480px;">
+        <h2 id="rowModalTitle" style="text-align:center;color:#1a3a6c;margin-bottom:18px;">행 추가</h2>
+        <input type="hidden" id="r_id"/>
+        <div class="form-row"><label>라인 *</label><input id="r_line"/></div>
+        <div class="form-row"><label>대상 *</label><input id="r_target"/></div>
+        <div class="form-row"><label>점검</label><input id="r_inspect"/></div>
+        <div class="form-row"><label>급지포인트</label><input id="r_point"/></div>
+        <div class="form-row"><label>주기 * (예: 6M, 10D)</label><input id="r_cycle"/></div>
+        <div class="form-row"><label>비고</label><input id="r_remark"/></div>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn btn-primary btn-block" id="btnRowSave">저장</button>
+          <button class="btn btn-ghost btn-block" style="color:#333;border-color:#ccd3dd;" id="btnRowCancel">취소</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ▼ 휴지 관리 모달 -->
+    <div id="pauseModal" class="modal-overlay hidden">
+      <div class="modal" style="width:520px;">
+        <h2 style="text-align:center;color:#1a3a6c;margin-bottom:12px;">🛑 휴지 기간 관리</h2>
+        <div id="pauseTargetInfo" style="text-align:center;color:#666;font-size:13px;margin-bottom:14px;"></div>
+
+        <div class="form-row" style="display:flex;gap:8px;align-items:end;">
+          <div style="flex:1;"><label>시작일</label><input type="date" id="p_start"/></div>
+          <div style="flex:1;"><label>종료일</label><input type="date" id="p_end"/></div>
+          <button class="btn btn-primary" id="btnPauseAdd">＋ 추가</button>
+        </div>
+
+        <div class="table-wrap" style="max-height:220px;overflow:auto;margin-top:10px;">
+          <table>
+            <thead>
+              <tr><th>#</th><th>시작일</th><th>종료일</th><th>일수</th><th>관리</th></tr>
+            </thead>
+            <tbody id="pauseTbody"></tbody>
+          </table>
+        </div>
+
+        <button class="btn btn-primary btn-block" id="btnPauseClose" style="margin-top:14px;">닫기</button>
+      </div>
+    </div>
   `;
 
-  // 신규 등록 버튼
-  document.getElementById("btnQuickAdd").addEventListener("click", ()=>quickAddRow(process));
+  // 이벤트 바인딩
+  document.getElementById("btnAddRow").addEventListener("click", ()=>openRowModal(process));
+  document.getElementById("btnRowSave").addEventListener("click", ()=>saveRowModal(process));
+  document.getElementById("btnRowCancel").addEventListener("click", closeRowModal);
+  document.getElementById("btnPauseClose").addEventListener("click", closePauseModal);
+  document.getElementById("btnPauseAdd").addEventListener("click", addPause);
 
-  // 필터
   document.getElementById("btnFilterDate").addEventListener("click", ()=>{
     state.dateFrom = document.getElementById("dateFrom").value;
     state.dateTo   = document.getElementById("dateTo").value;
@@ -402,40 +466,124 @@ function renderProcessPage(container, process) {
   renderProcessRows(process);
 }
 
-/* 인라인 신규 등록 */
-function quickAddRow(process) {
-  const line    = document.getElementById("q_line").value.trim();
-  const target  = document.getElementById("q_target").value.trim();
-  const inspect = document.getElementById("q_inspect").value.trim();
-  const point   = document.getElementById("q_point").value.trim();
-  const cycle   = document.getElementById("q_cycle").value.trim();
-  const remark  = document.getElementById("q_remark").value.trim();
-
-  if (!line || !target || !cycle) {
+/* ---------- 행 추가/수정 모달 ---------- */
+let _currentProcessForModal = null;
+function openRowModal(process, id) {
+  _currentProcessForModal = process;
+  document.getElementById("rowModal").classList.remove("hidden");
+  document.getElementById("rowModalTitle").textContent = id ? "행 수정" : "행 추가";
+  if (id) {
+    const row = loadMaster().find(x=>x.id===id);
+    if (!row) return;
+    document.getElementById("r_id").value      = row.id;
+    document.getElementById("r_line").value    = row.line || "";
+    document.getElementById("r_target").value  = row.target || "";
+    document.getElementById("r_inspect").value = row.inspect || "";
+    document.getElementById("r_point").value   = row.point || "";
+    document.getElementById("r_cycle").value   = row.cycle || "";
+    document.getElementById("r_remark").value  = row.remark || "";
+  } else {
+    ["r_id","r_line","r_target","r_inspect","r_point","r_cycle","r_remark"]
+      .forEach(fid => document.getElementById(fid).value = "");
+  }
+}
+function closeRowModal() {
+  document.getElementById("rowModal").classList.add("hidden");
+}
+function saveRowModal(process) {
+  const row = {
+    id:      document.getElementById("r_id").value || uid(),
+    process: process,
+    line:    document.getElementById("r_line").value.trim(),
+    target:  document.getElementById("r_target").value.trim(),
+    inspect: document.getElementById("r_inspect").value.trim(),
+    point:   document.getElementById("r_point").value.trim(),
+    cycle:   document.getElementById("r_cycle").value.trim(),
+    remark:  document.getElementById("r_remark").value.trim()
+  };
+  if (!row.line || !row.target || !row.cycle) {
     alert("라인, 대상, 주기는 필수 항목입니다.");
     return;
   }
-  if (!parseCycle(cycle)) {
+  if (!parseCycle(row.cycle)) {
     alert("주기 형식이 올바르지 않습니다. 예: 6M, 10D");
     return;
   }
   const data = loadMaster();
-  data.push({ id: uid(), process, line, target, inspect, point, cycle, remark });
+  const idx = data.findIndex(x=>x.id===row.id);
+  if (idx>=0) data[idx] = row; else data.push(row);
   saveMaster(data);
-
-  // 폼 초기화
-  ["q_line","q_target","q_inspect","q_point","q_cycle","q_remark"]
-    .forEach(id => document.getElementById(id).value = "");
-
+  closeRowModal();
   renderProcessRows(process);
 }
 
-/* 회차 컬럼 개수 계산: 각 행별 (실제 입력 개수 + 1)의 최대값, 최소 MIN_ROUNDS */
+/* ---------- 휴지 모달 ---------- */
+let _currentPauseTargetId = null;
+window.openPauseModal = function(id) {
+  _currentPauseTargetId = id;
+  const row = loadMaster().find(x=>x.id===id);
+  document.getElementById("pauseTargetInfo").textContent =
+    row ? `[${row.line}] ${row.target} - ${row.point||""}` : "";
+  document.getElementById("p_start").value = "";
+  document.getElementById("p_end").value = "";
+  document.getElementById("pauseModal").classList.remove("hidden");
+  renderPauseList();
+};
+function closePauseModal() {
+  document.getElementById("pauseModal").classList.add("hidden");
+  _currentPauseTargetId = null;
+  renderProcessRows(state.currentSub);
+}
+function addPause() {
+  const s = document.getElementById("p_start").value;
+  const e = document.getElementById("p_end").value;
+  if (!s || !e) { alert("시작일과 종료일을 모두 입력하세요."); return; }
+  if (s > e)    { alert("종료일이 시작일보다 빠릅니다."); return; }
+  const all = loadPauses();
+  const list = all[_currentPauseTargetId] || [];
+  list.push({ start:s, end:e });
+  all[_currentPauseTargetId] = list;
+  savePauses(all);
+  document.getElementById("p_start").value = "";
+  document.getElementById("p_end").value = "";
+  renderPauseList();
+}
+window.removePause = function(idx) {
+  const all = loadPauses();
+  const list = all[_currentPauseTargetId] || [];
+  list.splice(idx, 1);
+  all[_currentPauseTargetId] = list;
+  savePauses(all);
+  renderPauseList();
+};
+function renderPauseList() {
+  const tbody = document.getElementById("pauseTbody");
+  const list = (loadPauses()[_currentPauseTargetId]) || [];
+  if (!list.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="padding:14px;color:#888;">등록된 휴지 기간이 없습니다.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = list.map((p,i)=>{
+    const ps = parseDate(p.start), pe = parseDate(p.end);
+    const days = (ps && pe) ? diffDays(ps, pe) : 0;
+    return `
+      <tr>
+        <td>${i+1}</td>
+        <td>${p.start}</td>
+        <td>${p.end}</td>
+        <td>${days}일</td>
+        <td><button class="btn btn-sm btn-danger" onclick="removePause(${i})">삭제</button></td>
+      </tr>
+    `;
+  }).join("");
+}
+
+/* ---------- 회차 자동 확장 ---------- */
 function calcRoundsCount(rows) {
   let max = MIN_ROUNDS;
   rows.forEach(r => {
     const filled = (r.recs || []).filter(x => x.date).length;
-    const need = filled + 1;   // 다음 입력 칸 하나 여유
+    const need = filled + 1;
     if (need > max) max = need;
   });
   return max;
@@ -444,18 +592,25 @@ function calcRoundsCount(rows) {
 function renderProcessRows(process) {
   const thead = document.getElementById("processThead");
   const tbody = document.getElementById("processTbody");
+  if (!thead || !tbody) return;
+
   const master = loadMaster().filter(r => r.process === process);
   const records = loadRecords();
+  const pauses = loadPauses();
 
   const rowsAll = master.map(r => {
     const recs = records[r.id] || [];
     const filled = recs.filter(x => x.date);
     const lastDate = filled.length ? filled[filled.length-1].date : "";
-    const nextDate = calcNextDate(lastDate, r.cycle);
-    return { ...r, recs, nextDate };
+    const pauseList = pauses[r.id] || [];
+    const nextDate = calcNextDate(lastDate, r.cycle, pauseList);
+    const pauseDays = pauseList.reduce((s,p)=>{
+      const ps=parseDate(p.start), pe=parseDate(p.end);
+      return s + (ps && pe ? diffDays(ps,pe) : 0);
+    },0);
+    return { ...r, recs, nextDate, pauseCount: pauseList.length, pauseDays };
   });
 
-  // 필터
   const rows = rowsAll
     .filter(r => {
       for (const k of Object.keys(state.filters)) {
@@ -473,13 +628,13 @@ function renderProcessRows(process) {
     });
 
   const roundsCnt = calcRoundsCount(rows);
-
-  // 헤더 렌더
   const roundHeaders = Array.from({length: roundsCnt}, (_,i)=>`<th>${i+1}회차</th>`).join("");
+
   thead.innerHTML = `
     <tr>
       <th>라인</th><th>대상</th><th>점검/급지포인트</th><th>주기</th>
       <th>차회수리일자</th>
+      <th>휴지</th>
       ${roundHeaders}
       <th>관리</th>
     </tr>
@@ -488,7 +643,7 @@ function renderProcessRows(process) {
       <th><input data-f="target"  placeholder="검색" value="${state.filters.target||""}"/></th>
       <th><input data-f="point"   placeholder="검색" value="${state.filters.point||""}"/></th>
       <th><input data-f="cycle"   placeholder="검색" value="${state.filters.cycle||""}"/></th>
-      <th colspan="${roundsCnt + 2}"></th>
+      <th colspan="${roundsCnt + 3}"></th>
     </tr>
   `;
   thead.querySelectorAll(".filter-row input").forEach(inp=>{
@@ -499,12 +654,11 @@ function renderProcessRows(process) {
   });
 
   if (!rows.length) {
-    tbody.innerHTML = `<tr><td colspan="${roundsCnt + 6}" style="padding:20px;color:#888;">해당 조건의 데이터가 없습니다.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="${roundsCnt + 7}" style="padding:20px;color:#888;">등록된 데이터가 없습니다. 상단 [＋ 행 추가] 로 신규 등록하세요.</td></tr>`;
     return;
   }
 
   tbody.innerHTML = rows.map(r=>{
-    // 회차별 셀 (roundsCnt 만큼 생성)
     const roundCells = Array.from({length: roundsCnt}, (_,i)=>{
       const rec = r.recs[i] || { date:"", reason:"" };
       return `<td>
@@ -515,31 +669,48 @@ function renderProcessRows(process) {
       </td>`;
     }).join("");
 
+    const pauseBtnLabel = r.pauseCount > 0
+      ? `🛑 휴지 (${r.pauseCount}건 / ${r.pauseDays}일)`
+      : `🛑 휴지`;
+    const pauseBtnClass = r.pauseCount > 0 ? "btn-warn" : "btn-ghost-dark";
+
     return `
-      <tr data-row="${r.id}">
+      <tr data-row="${r.id}" ${r.pauseCount>0 ? 'class="paused-row"' : ''}>
         <td>${r.line||""}</td>
         <td>${r.target||""}</td>
         <td>${r.point||""}</td>
         <td>${r.cycle||""}</td>
         <td class="next-date-ok">${r.nextDate || "-"}</td>
+        <td>
+          <button class="btn btn-sm ${pauseBtnClass}" onclick="openPauseModal('${r.id}')">${pauseBtnLabel}</button>
+        </td>
         ${roundCells}
         <td>
-          <button class="btn btn-sm btn-danger" onclick="deleteMaster('${r.id}')">삭제</button>
+          <button class="btn btn-sm btn-primary" onclick="editRow('${r.id}')">수정</button>
+          <button class="btn btn-sm btn-danger"  onclick="deleteMaster('${r.id}')">삭제</button>
         </td>
       </tr>
     `;
   }).join("");
 
-  // 각 셀 input 이벤트 - 값 바뀔 때마다 자동 저장 + 다시 렌더
+  // 🔑 회차 입력 이벤트 바인딩 (렌더 후 매번 다시 붙임)
   tbody.querySelectorAll("input[data-id]").forEach(inp=>{
-    inp.addEventListener("change", e=>{
-      const id = e.target.dataset.id;
-      updateRecord(id);
-    });
+    inp.addEventListener("change", handleRoundChange);
   });
 }
 
-/* 회차 값 저장: 해당 행의 모든 회차 input 을 다시 수집해서 저장 */
+/* 회차 셀 값 변경 핸들러 */
+function handleRoundChange(e) {
+  const id = e.target.dataset.id;
+  updateRecord(id);
+}
+
+/* 행 수정 진입 */
+window.editRow = function(id) {
+  openRowModal(state.currentSub, id);
+};
+
+/* 회차 저장 */
 function updateRecord(id) {
   const inputs = document.querySelectorAll(`#processTbody input[data-id="${id}"]`);
   const recs = [];
@@ -549,7 +720,6 @@ function updateRecord(id) {
     if (!recs[i]) recs[i] = { date:"", reason:"" };
     recs[i][k] = inp.value;
   });
-  // 마지막 유효 인덱스까지만 저장
   let lastIdx = -1;
   recs.forEach((r,i)=>{ if (r && (r.date || r.reason)) lastIdx = i; });
   const cleaned = recs.slice(0, lastIdx+1).map(r => r || { date:"", reason:"" });
@@ -558,11 +728,11 @@ function updateRecord(id) {
   all[id] = cleaned;
   saveRecords(all);
 
-  // 회차 자동 확장 반영을 위해 재렌더
+  // 회차/차회수리일자 재계산을 위해 재렌더 → 새 회차 열도 이때 자동 생성됨
   renderProcessRows(state.currentSub);
 }
 
-/* ---------- 앱 시작 ---------- */
+/* ---------- 시작 ---------- */
 document.addEventListener("DOMContentLoaded", () => {
   initLogin();
   initMenu();
