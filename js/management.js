@@ -21,7 +21,6 @@ const isManageView = (category === '관리');
 document.getElementById('pageTitle').textContent = 
     isManageView ? '📋 관리 (통합 조회)' : `🛢️ 급유급지관리 - ${category}`;
 
-// '관리' 뷰에서는 행 추가 버튼 숨김
 if (isManageView) document.getElementById('addRowBtn').style.display = 'none';
 
 // 데이터 로드/저장
@@ -32,9 +31,8 @@ function saveData(cat, data) {
     localStorage.setItem('equipment_' + cat, JSON.stringify(data));
 }
 
-// 현재 데이터
 let currentData = [];
-let maxRounds = 1; // 최대 회차 수
+let maxRounds = 1;
 
 function loadCurrentData() {
     if (isManageView) {
@@ -46,22 +44,53 @@ function loadCurrentData() {
     } else {
         currentData = loadData(category);
     }
-    // 최대 회차 계산
     maxRounds = 1;
     currentData.forEach(row => {
         const rounds = row.rounds || [];
-        if (rounds.length >= maxRounds) maxRounds = rounds.length + 1;
+        let lastFilledIdx = -1;
+        rounds.forEach((r, i) => {
+            if (r && (r.date || r.reason)) lastFilledIdx = i;
+        });
+        const need = lastFilledIdx + 2;
+        if (need > maxRounds) maxRounds = need;
     });
 }
 
-// 날짜 계산: 마지막 회차 일자 + 주기 (휴지가 있으면 그 이후)
+// ★ 주기 문자열 파싱 ("7D", "1M", "1Y" 등) → { num, unit }
+function parseCycle(cycleStr) {
+    if (!cycleStr) return null;
+    const s = String(cycleStr).trim().toUpperCase();
+    const match = s.match(/^(\d+)\s*([DMY])$/);
+    if (!match) return null;
+    return { num: parseInt(match[1]), unit: match[2] };
+}
+
+// ★ 주기 유효성 검사
+function validateCycle(cycleStr) {
+    if (!cycleStr) return true; // 빈 값은 허용
+    return parseCycle(cycleStr) !== null;
+}
+
+// ★ 날짜에 주기 더하기
+function addCycle(date, cycle) {
+    const result = new Date(date);
+    if (cycle.unit === 'D') {
+        result.setDate(result.getDate() + cycle.num);
+    } else if (cycle.unit === 'M') {
+        result.setMonth(result.getMonth() + cycle.num);
+    } else if (cycle.unit === 'Y') {
+        result.setFullYear(result.getFullYear() + cycle.num);
+    }
+    return result;
+}
+
+// 차회수리일자 계산
 function calcNextDate(row) {
-    const cycle = parseInt(row.cycle) || 0;
-    if (cycle === 0) return '';
-    const rounds = row.rounds || [];
+    const cycle = parseCycle(row.cycle);
+    if (!cycle) return '';
     
+    const rounds = row.rounds || [];
     let baseDate = null;
-    // 가장 최근 회차 일자
     for (let i = rounds.length - 1; i >= 0; i--) {
         if (rounds[i] && rounds[i].date) {
             baseDate = new Date(rounds[i].date);
@@ -70,24 +99,30 @@ function calcNextDate(row) {
     }
     if (!baseDate) return '';
     
-    // 휴지일자가 있으면 그것을 기준으로
-    if (row.pauseDate) {
-        const pause = new Date(row.pauseDate);
-        if (pause > baseDate) baseDate = pause;
+    let nextDate = addCycle(baseDate, cycle);
+    
+    // 휴지 기간이 예정일에 걸치면 휴지 종료일 다음날로 조정
+    if (row.pauseStart && row.pauseEnd) {
+        const pStart = new Date(row.pauseStart);
+        const pEnd = new Date(row.pauseEnd);
+        if (nextDate >= pStart && nextDate <= pEnd) {
+            nextDate = new Date(pEnd);
+            nextDate.setDate(nextDate.getDate() + 1);
+        }
     }
     
-    baseDate.setDate(baseDate.getDate() + cycle);
-    return baseDate.toISOString().split('T')[0];
+    return nextDate.toISOString().split('T')[0];
 }
 
-// 테이블 헤더 렌더링 (회차 수에 따라 동적)
+// 테이블 헤더
 function renderHeader() {
     const thead = document.getElementById('tableHeader');
     let html = '';
     if (isManageView) html += '<th>카테고리</th>';
     html += `
         <th>라인</th><th>대상</th><th>점검/급지 포인트</th>
-        <th>주기(일)</th><th>차회수리일자</th><th>휴지</th>
+        <th>주기<br><small>(1D/1M/1Y)</small></th>
+        <th>차회수리일자</th><th>휴지 (시작 ~ 종료)</th>
     `;
     for (let i = 1; i <= maxRounds; i++) {
         html += `<th>${i}회차 일자</th><th>${i}회차 사유</th>`;
@@ -96,7 +131,7 @@ function renderHeader() {
     thead.innerHTML = html;
 }
 
-// 테이블 바디 렌더링
+// 테이블 바디
 function renderBody(filterData = null) {
     const tbody = document.getElementById('tableBody');
     tbody.innerHTML = '';
@@ -106,7 +141,7 @@ function renderBody(filterData = null) {
         const tr = document.createElement('tr');
         tr.dataset.idx = idx;
         tr.onclick = function(e) {
-            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON') return;
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'BUTTON' || e.target.tagName === 'SELECT') return;
             document.querySelectorAll('#tableBody tr').forEach(r => r.classList.remove('selected'));
             this.classList.add('selected');
         };
@@ -114,32 +149,43 @@ function renderBody(filterData = null) {
         let html = '';
         if (isManageView) {
             html += `<td>${row._category || ''}</td>`;
+            const pauseStr = (row.pauseStart || row.pauseEnd) 
+                ? `${row.pauseStart || '?'} ~ ${row.pauseEnd || '?'}` : '';
             html += `
                 <td>${row.line || ''}</td>
                 <td>${row.target || ''}</td>
                 <td>${row.point || ''}</td>
                 <td>${row.cycle || ''}</td>
-                <td>${row.nextDate || ''}</td>
-                <td>${row.pauseDate || ''}</td>
+                <td><span class="next-date-display">${row.nextDate || '-'}</span></td>
+                <td>${pauseStr}</td>
             `;
             for (let i = 0; i < maxRounds; i++) {
                 const r = (row.rounds || [])[i] || {};
                 html += `<td>${r.date || ''}</td><td>${r.reason || ''}</td>`;
             }
         } else {
+            const cycleValid = validateCycle(row.cycle);
             html += `
-                <td><input type="text" list="lineOptions" value="${row.line || ''}" onchange="updateField(${idx},'line',this.value)"></td>
-                <td><input type="text" list="targetOptions" value="${row.target || ''}" onchange="updateField(${idx},'target',this.value)"></td>
-                <td><input type="text" list="pointOptions" value="${row.point || ''}" onchange="updateField(${idx},'point',this.value)"></td>
-                <td><input type="number" value="${row.cycle || ''}" onchange="updateField(${idx},'cycle',this.value)" style="width:70px;"></td>
-                <td><strong>${row.nextDate || '-'}</strong></td>
-                <td><input type="date" value="${row.pauseDate || ''}" onchange="updateField(${idx},'pauseDate',this.value)"></td>
+                <td><input type="text" list="lineOptions" value="${row.line || ''}" placeholder="라인" onchange="updateField(${idx},'line',this.value)"></td>
+                <td><input type="text" list="targetOptions" value="${row.target || ''}" placeholder="대상" onchange="updateField(${idx},'target',this.value)"></td>
+                <td><input type="text" list="pointOptions" value="${row.point || ''}" placeholder="포인트" onchange="updateField(${idx},'point',this.value)"></td>
+                <td><input type="text" list="cycleOptions" value="${row.cycle || ''}" placeholder="예:7D,1M,1Y" 
+                    class="${!cycleValid ? 'invalid-input' : ''}" 
+                    onchange="updateCycle(${idx}, this)" style="min-width:80px;max-width:100px;"></td>
+                <td><span class="next-date-display">${row.nextDate || '-'}</span></td>
+                <td>
+                    <div class="pause-cell">
+                        <input type="date" value="${row.pauseStart || ''}" onchange="updateField(${idx},'pauseStart',this.value)" title="휴지 시작일">
+                        <span class="pause-sep">~</span>
+                        <input type="date" value="${row.pauseEnd || ''}" onchange="updateField(${idx},'pauseEnd',this.value)" title="휴지 종료일">
+                    </div>
+                </td>
             `;
             for (let i = 0; i < maxRounds; i++) {
                 const r = (row.rounds || [])[i] || {};
                 html += `
                     <td><input type="date" value="${r.date || ''}" onchange="updateRound(${idx},${i},'date',this.value)"></td>
-                    <td><input type="text" list="reasonOptions" value="${r.reason || ''}" onchange="updateRound(${idx},${i},'reason',this.value)"></td>
+                    <td><input type="text" list="reasonOptions" value="${r.reason || ''}" placeholder="정기/돌발" onchange="updateRound(${idx},${i},'reason',this.value)"></td>
                 `;
             }
             html += `<td><button class="del-btn" onclick="deleteRow(${idx})">삭제</button></td>`;
@@ -148,6 +194,22 @@ function renderBody(filterData = null) {
         tr.innerHTML = html;
         tbody.appendChild(tr);
     });
+}
+
+// ★ 주기 업데이트 (유효성 검사 포함)
+function updateCycle(idx, inputEl) {
+    const value = inputEl.value.trim().toUpperCase();
+    if (value && !validateCycle(value)) {
+        alert('주기 형식이 올바르지 않습니다.\n\n올바른 예시:\n • 7D (7일)\n • 1M (1개월)\n • 1Y (1년)\n • 3M (3개월)');
+        inputEl.value = currentData[idx].cycle || '';
+        inputEl.focus();
+        return;
+    }
+    currentData[idx].cycle = value;
+    currentData[idx].nextDate = calcNextDate(currentData[idx]);
+    saveData(category, currentData);
+    renderBody();
+    updateDatalists();
 }
 
 // 필드 업데이트
@@ -167,7 +229,6 @@ function updateRound(idx, roundIdx, field, value) {
     currentData[idx].nextDate = calcNextDate(currentData[idx]);
     saveData(category, currentData);
     
-    // 마지막 회차에 데이터 입력되면 다음 회차 자동 생성
     loadCurrentData();
     renderHeader();
     renderBody();
@@ -175,7 +236,7 @@ function updateRound(idx, roundIdx, field, value) {
 
 // 행 추가
 function addNewRow() {
-    currentData.push({ line:'', target:'', point:'', cycle:'', nextDate:'', pauseDate:'', rounds: [] });
+    currentData.push({ line:'', target:'', point:'', cycle:'', nextDate:'', pauseStart:'', pauseEnd:'', rounds: [] });
     saveData(category, currentData);
     renderBody();
 }
@@ -191,11 +252,12 @@ function deleteRow(idx) {
     }
 }
 
-// 자동완성 datalist 업데이트
+// datalist 업데이트
 function updateDatalists() {
     const lines = [...new Set(currentData.map(r => r.line).filter(Boolean))];
     const targets = [...new Set(currentData.map(r => r.target).filter(Boolean))];
     const points = [...new Set(currentData.map(r => r.point).filter(Boolean))];
+    const cycles = [...new Set(currentData.map(r => r.cycle).filter(Boolean))];
     
     document.getElementById('lineOptions').innerHTML = lines.map(v => `<option value="${v}">`).join('');
     document.getElementById('targetOptions').innerHTML = targets.map(v => `<option value="${v}">`).join('');
@@ -203,9 +265,15 @@ function updateDatalists() {
     document.getElementById('lineList').innerHTML = lines.map(v => `<option value="${v}">`).join('');
     document.getElementById('targetList').innerHTML = targets.map(v => `<option value="${v}">`).join('');
     document.getElementById('pointList').innerHTML = points.map(v => `<option value="${v}">`).join('');
+    
+    // 주기 자동완성 (기본 예시 + 기존 입력값)
+    const defaultCycles = ['1D', '3D', '7D', '14D', '1M', '3M', '6M', '1Y'];
+    const allCycles = [...new Set([...defaultCycles, ...cycles])];
+    const cycleOptEl = document.getElementById('cycleOptions');
+    if (cycleOptEl) cycleOptEl.innerHTML = allCycles.map(v => `<option value="${v}">`).join('');
 }
 
-// 필터 적용
+// 필터
 function applyFilter() {
     const fLine = document.getElementById('filterLine').value.toLowerCase();
     const fTarget = document.getElementById('filterTarget').value.toLowerCase();
