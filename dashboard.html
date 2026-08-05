@@ -15,7 +15,7 @@
         <ul>
             <li class="active"><a href="dashboard.html">📊 대시보드</a></li>
             <li class="has-sub">
-                <a href="#">🛢️ 급유급지관리 ▾</a>
+                <a href="#">🛢️ 급유급지관리</a>
                 <ul class="sub-menu">
                     <li><a href="management.html?category=예비소성로">예비소성로</a></li>
                     <li><a href="management.html?category=본소성">본소성</a></li>
@@ -29,7 +29,7 @@
                 </ul>
             </li>
             <li class="has-sub">
-                <a href="#">⚙️ 소모품이력관리 ▾</a>
+                <a href="#">⚙️ 소모품이력관리</a>
                 <ul class="sub-menu">
                     <li><a href="#">준비 중</a></li>
                 </ul>
@@ -97,6 +97,14 @@
         <div id="popoverBody"></div>
     </div>
 
+    <!-- 인증/서브메뉴 스크립트 (반드시 먼저 로드) -->
+    <script src="js/auth.js"></script>
+    <script>
+        // 로그인 체크 - 비로그인 시 index.html로 이동
+        checkLogin();
+    </script>
+    
+    <!-- 대시보드 스크립트 -->
     <script src="js/dashboard.js"></script>
 </body>
 </html>
