@@ -13,6 +13,7 @@ body {
     align-items: center;
     min-height: 100vh;
     background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+    padding: 20px;
 }
 .login-box {
     background: white;
@@ -20,23 +21,50 @@ body {
     border-radius: 15px;
     box-shadow: 0 20px 50px rgba(0,0,0,0.3);
     width: 400px;
+    max-width: 100%;
     text-align: center;
 }
-.login-box h1 { color: #1e3c72; margin-bottom: 10px; font-size: 26px; }
-.login-box .subtitle { color: #666; margin-bottom: 30px; font-size: 14px; }
-.login-box input {
+.login-box .logo {
+    font-size: 50px;
+    margin-bottom: 15px;
+}
+.login-box h1 {
+    color: #1e3c72;
+    margin-bottom: 10px;
+    font-size: 26px;
+}
+.login-box .subtitle {
+    color: #666;
+    margin-bottom: 30px;
+    font-size: 14px;
+}
+.input-group {
+    text-align: left;
+    margin-bottom: 15px;
+}
+.input-group label {
+    display: block;
+    font-size: 13px;
+    color: #333;
+    font-weight: bold;
+    margin-bottom: 6px;
+}
+.input-group input {
     width: 100%;
     padding: 12px 15px;
-    margin-bottom: 15px;
     border: 2px solid #ddd;
     border-radius: 8px;
     font-size: 15px;
     transition: border-color 0.2s;
 }
-.login-box input:focus { outline: none; border-color: #2a5298; }
-.login-box button {
+.input-group input:focus {
+    outline: none;
+    border-color: #2a5298;
+}
+.login-btn {
     width: 100%;
     padding: 13px;
+    margin-top: 10px;
     background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
     color: white;
     border: none;
@@ -46,7 +74,14 @@ body {
     cursor: pointer;
     transition: transform 0.1s;
 }
-.login-box button:hover { transform: translateY(-2px); }
+.login-btn:hover {
+    transform: translateY(-2px);
+}
+.footer-text {
+    margin-top: 25px;
+    font-size: 12px;
+    color: #999;
+}
 
 /* ===== 헤더 ===== */
 .top-header {
@@ -736,4 +771,5 @@ body {
     .summary-cards { grid-template-columns: repeat(2, 1fr); }
     .filter-box { flex-direction: column; align-items: stretch; }
     .filter-item input, .filter-item select { min-width: 100%; }
+    .login-box { padding: 35px 25px; }
 }
