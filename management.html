@@ -17,7 +17,7 @@
         <ul>
             <li><a href="dashboard.html">📊 대시보드</a></li>
             <li class="has-sub active">
-                <a href="#">🛢️ 급유급지관리 ▾</a>
+                <a href="#">🛢️ 급유급지관리</a>
                 <ul class="sub-menu">
                     <li><a href="management.html?category=예비소성로">예비소성로</a></li>
                     <li><a href="management.html?category=본소성">본소성</a></li>
@@ -31,7 +31,7 @@
                 </ul>
             </li>
             <li class="has-sub">
-                <a href="#">⚙️ 소모품이력관리 ▾</a>
+                <a href="#">⚙️ 소모품이력관리</a>
                 <ul class="sub-menu">
                     <li><a href="#">준비 중</a></li>
                 </ul>
@@ -119,6 +119,15 @@
             <option value="돌발">
         </datalist>
     </main>
+
+    <!-- 인증/서브메뉴 스크립트 (반드시 먼저 로드) -->
+    <script src="js/auth.js"></script>
+    <script>
+        // 로그인 체크
+        checkLogin();
+    </script>
+    
+    <!-- 관리 페이지 스크립트 -->
     <script src="js/management.js"></script>
 </body>
 </html>
