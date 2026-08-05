@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <title>설비관리 - 설비관리 테스트V1</title>
     <link rel="stylesheet" href="css/style.css">
+    <!-- ★ 엑셀 내보내기 라이브러리 (SheetJS) -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <header class="top-header">
@@ -48,6 +50,20 @@
         </div>
 
         <div class="filter-box">
+            <!-- ★ 카테고리 필터 (관리 통합 조회에서만 표시) -->
+            <div class="filter-item" id="filterCategoryBox" style="display:none;">
+                <label>카테고리 필터</label>
+                <select id="filterCategory">
+                    <option value="">전체</option>
+                    <option value="예비소성로">예비소성로</option>
+                    <option value="본소성">본소성</option>
+                    <option value="열처리">열처리</option>
+                    <option value="혼합설비">혼합설비</option>
+                    <option value="필터프레스">필터프레스</option>
+                    <option value="진공건조기">진공건조기</option>
+                    <option value="냉각기">냉각기</option>
+                </select>
+            </div>
             <div class="filter-item">
                 <label>라인 필터</label>
                 <input type="text" id="filterLine" list="lineList" placeholder="라인 선택/입력">
@@ -66,9 +82,11 @@
             <button class="filter-btn" onclick="applyFilter()">🔍 필터 적용</button>
             <button class="filter-btn reset" onclick="resetFilter()">↻ 초기화</button>
             <button class="filter-btn add" id="addRowBtn" onclick="addNewRow()">➕ 행 추가</button>
+            <!-- ★ 엑셀 내보내기 버튼 (관리 뷰에서만 표시) -->
+            <button class="filter-btn excel" id="excelExportBtn" onclick="exportToExcel()" style="display:none;">📥 엑셀 내보내기</button>
         </div>
 
-        <!-- ★ 관리 뷰에서만 표시되는 체크박스 필터 -->
+        <!-- 관리 뷰에서만 표시되는 체크박스 필터 -->
         <div class="filter-box" id="checkFilterBox" style="display:none;">
             <div class="filter-item">
                 <label>✅ 체크 상태 필터 (마지막 회차 기준)</label>
