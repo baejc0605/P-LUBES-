@@ -566,3 +566,13 @@ body { background: #f0f2f5; min-height: 100vh; }
 }
 .urgent-table tr:hover td { background: #fff8e1; }
 
+
+/* ===== 엑셀 내보내기 버튼 ===== */
+.filter-btn.excel {
+    background: #217346; /* 엑셀 그린 */
+    color: white;
+    font-weight: bold;
+}
+.filter-btn.excel:hover {
+    background: #1a5c38;
+}
