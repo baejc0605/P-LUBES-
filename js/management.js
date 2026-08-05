@@ -21,10 +21,16 @@ document.getElementById('pageTitle').textContent =
 
 if (isManageView) document.getElementById('addRowBtn').style.display = 'none';
 
-// ★ 관리 뷰인 경우 체크박스 필터 UI 표시
+// ★ 관리 뷰인 경우 체크박스 필터 + 카테고리 필터 + 엑셀 내보내기 버튼 표시
 if (isManageView) {
     const chkFilterEl = document.getElementById('checkFilterBox');
     if (chkFilterEl) chkFilterEl.style.display = 'flex';
+    
+    const catFilterEl = document.getElementById('filterCategoryBox');
+    if (catFilterEl) catFilterEl.style.display = 'flex';
+    
+    const excelBtn = document.getElementById('excelExportBtn');
+    if (excelBtn) excelBtn.style.display = 'inline-block';
 }
 
 // ===== 데이터 로드/저장 =====
@@ -87,15 +93,12 @@ function addCycle(date, cycle) {
     else if (cycle.unit === 'Y') result.setFullYear(result.getFullYear() + cycle.num);
     return result;
 }
-
-// ★ 두 날짜 사이 일수 차이
 function daysBetween(d1, d2) {
     const ms = new Date(d2) - new Date(d1);
     return Math.round(ms / (1000 * 60 * 60 * 24));
 }
 
 // ===== 차회수리일자 계산 =====
-// ★ 휴지 기간이 예정일 이전에 있거나 겹치면 → 휴지 기간 일수만큼 뒤로 밀기
 function calcNextDate(row) {
     const cycle = parseCycle(row.cycle);
     const rounds = row.rounds || [];
@@ -123,20 +126,14 @@ function calcNextDate(row) {
     const baseDate = new Date(lastRound.date);
     let nextDate = addCycle(baseDate, cycle);
     
-    // ★ 휴지 기간 반영 (개선)
     if (row.pauseStart && row.pauseEnd) {
         const pStart = new Date(row.pauseStart);
         const pEnd = new Date(row.pauseEnd);
         
-        // 유효한 휴지 기간인 경우
         if (pStart <= pEnd) {
-            // 휴지가 기준일 이후에 시작되고, 예정일 이전 혹은 예정일과 겹치면 → 밀기
-            // (즉, 휴지 기간이 [기준일, 예정일] 범위와 조금이라도 겹치면)
             if (pEnd >= baseDate && pStart <= nextDate) {
-                // 실제 겹치는 구간의 시작
                 const overlapStart = pStart < baseDate ? baseDate : pStart;
                 const overlapEnd = pEnd;
-                // 겹친 일수 (하루 단위 포함 +1)
                 const pauseDays = daysBetween(overlapStart, overlapEnd) + 1;
                 nextDate.setDate(nextDate.getDate() + pauseDays);
             }
@@ -152,19 +149,17 @@ function refreshNextDate(row) {
     row.nextDateLocked = result.locked;
 }
 
-// ===== ★ 체크박스 상태 판단 (취소선용) =====
-// 특정 회차의 특정 항목이 미체크인데, 이후 회차에서 체크되었다면 → strikethrough
+// ===== 취소선 판단 =====
 function isStrikethrough(rounds, roundIdx, item) {
     const r = rounds[roundIdx];
-    if (!r || !r.checks || r.checks[item]) return false; // 자기 자신이 체크면 X
-    // 이후 회차 중 체크된 게 있는지 확인
+    if (!r || !r.checks || r.checks[item]) return false;
     for (let i = roundIdx + 1; i < rounds.length; i++) {
         if (rounds[i] && rounds[i].checks && rounds[i].checks[item]) return true;
     }
     return false;
 }
 
-// ===== ★ 체크박스 필터 판단 (관리 뷰용) =====
+// ===== 체크박스 필터 판단 =====
 function passCheckFilter(row) {
     if (!isManageView) return true;
     const mode = document.getElementById('filterCheck')?.value || 'all';
@@ -172,9 +167,8 @@ function passCheckFilter(row) {
     
     const cat = row._category || category;
     const items = getChecklistItems(cat, row.line, row.target, row.point);
-    if (items.length === 0) return mode === 'all'; // 항목 미등록 시 all에서만 표시
+    if (items.length === 0) return mode === 'all';
     
-    // 마지막 회차 기준으로 판단
     const rounds = row.rounds || [];
     let lastRound = null;
     for (let i = rounds.length - 1; i >= 0; i--) {
@@ -224,7 +218,6 @@ function renderBody(filterData = null) {
     tbody.innerHTML = '';
     let data = filterData || currentData;
     
-    // ★ 관리뷰 체크박스 필터 적용
     if (isManageView) {
         data = data.filter(passCheckFilter);
     }
@@ -252,7 +245,6 @@ function renderBody(filterData = null) {
         let html = '';
         
         if (isManageView) {
-            // ===== 조회 전용 =====
             html += `<td>${row._category || ''}</td>`;
             const pauseStr = (row.pauseStart || row.pauseEnd) 
                 ? `${row.pauseStart || '?'} ~ ${row.pauseEnd || '?'}` : '';
@@ -284,7 +276,6 @@ function renderBody(filterData = null) {
                 `;
             }
         } else {
-            // ===== 편집 가능 =====
             const cycleValid = validateCycle(row.cycle);
             const nextClass = row.nextDateLocked ? 'next-date-display locked' : 'next-date-display';
             const nextTitle = row.nextDateLocked ? '체크박스 미체크 항목이 있어 마지막 회차 일자로 고정됨' : '';
@@ -435,12 +426,15 @@ function updateDatalists() {
     if (cycleOptEl) cycleOptEl.innerHTML = allCycles.map(v => `<option value="${v}">`).join('');
 }
 
+// ===== 필터 =====
 function applyFilter() {
+    const fCat = isManageView ? (document.getElementById('filterCategory')?.value || '') : '';
     const fLine = document.getElementById('filterLine').value.toLowerCase();
     const fTarget = document.getElementById('filterTarget').value.toLowerCase();
     const fPoint = document.getElementById('filterPoint').value.toLowerCase();
     
     const filtered = currentData.filter(row => 
+        (!fCat || (row._category || '') === fCat) &&
         (!fLine || (row.line || '').toLowerCase().includes(fLine)) &&
         (!fTarget || (row.target || '').toLowerCase().includes(fTarget)) &&
         (!fPoint || (row.point || '').toLowerCase().includes(fPoint))
@@ -449,6 +443,10 @@ function applyFilter() {
 }
 
 function resetFilter() {
+    if (isManageView) {
+        const catEl = document.getElementById('filterCategory');
+        if (catEl) catEl.value = '';
+    }
     document.getElementById('filterLine').value = '';
     document.getElementById('filterTarget').value = '';
     document.getElementById('filterPoint').value = '';
@@ -457,15 +455,145 @@ function resetFilter() {
     renderBody();
 }
 
-// ★ 체크박스 필터 변경 시
 function applyCheckFilter() {
     renderBody();
 }
 
-// 초기 로드
+// ===== ★ 엑셀 내보내기 =====
+function getCheckStatus(rounds, roundIdx, item) {
+    // 완료 / 후속완료 / 미실시 판정
+    const r = rounds[roundIdx];
+    const checks = (r && r.checks) || {};
+    
+    if (checks[item]) return '완료';
+    
+    // 미체크지만 이후 회차에서 체크되었는지 확인
+    for (let i = roundIdx + 1; i < rounds.length; i++) {
+        if (rounds[i] && rounds[i].checks && rounds[i].checks[item]) {
+            return '후속완료';
+        }
+    }
+    return '미실시';
+}
+
+function exportToExcel() {
+    if (typeof XLSX === 'undefined') {
+        alert('엑셀 라이브러리 로딩에 실패했습니다. 페이지를 새로고침 후 다시 시도해주세요.');
+        return;
+    }
+    
+    // 현재 화면에 표시되는 데이터만 (필터 반영)
+    const fCat = document.getElementById('filterCategory')?.value || '';
+    const fLine = (document.getElementById('filterLine')?.value || '').toLowerCase();
+    const fTarget = (document.getElementById('filterTarget')?.value || '').toLowerCase();
+    const fPoint = (document.getElementById('filterPoint')?.value || '').toLowerCase();
+    
+    const filteredData = currentData
+        .filter(row => 
+            (!fCat || (row._category || '') === fCat) &&
+            (!fLine || (row.line || '').toLowerCase().includes(fLine)) &&
+            (!fTarget || (row.target || '').toLowerCase().includes(fTarget)) &&
+            (!fPoint || (row.point || '').toLowerCase().includes(fPoint))
+        )
+        .filter(passCheckFilter);
+    
+    if (filteredData.length === 0) {
+        alert('내보낼 데이터가 없습니다.');
+        return;
+    }
+    
+    // 헤더 구성
+    const header = [
+        '카테고리', '라인', '대상', '점검/급지 포인트', '주기', '차회수리일자', '차회수리상태', '휴지 시작', '휴지 종료'
+    ];
+    for (let i = 1; i <= maxRounds; i++) {
+        header.push(`${i}회차 일자`);
+        header.push(`${i}회차 사유`);
+        header.push(`${i}회차 체크상태`);
+    }
+    
+    const aoa = [header];
+    
+    filteredData.forEach(row => {
+        const rowCat = row._category || category;
+        const items = getChecklistItems(rowCat, row.line, row.target, row.point);
+        const rounds = row.rounds || [];
+        
+        const arr = [
+            row._category || '',
+            row.line || '',
+            row.target || '',
+            row.point || '',
+            row.cycle || '',
+            row.nextDate || '',
+            row.nextDateLocked ? '🔒 마지막회차 고정' : '정상',
+            row.pauseStart || '',
+            row.pauseEnd || ''
+        ];
+        
+        for (let i = 0; i < maxRounds; i++) {
+            const r = rounds[i] || {};
+            arr.push(r.date || '');
+            arr.push(r.reason || '');
+            
+            // 체크박스 상태를 텍스트로 (예: "상부(완료), 하부(미실시), 중간(후속완료)")
+            if (items.length === 0) {
+                arr.push('');
+            } else {
+                const statusStr = items.map(item => {
+                    const status = getCheckStatus(rounds, i, item);
+                    return `${item}(${status})`;
+                }).join(', ');
+                arr.push(statusStr);
+            }
+        }
+        
+        aoa.push(arr);
+    });
+    
+    // 워크북 생성
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(aoa);
+    
+    // 컬럼 너비 자동 조정
+    const colWidths = header.map((h, i) => {
+        let maxLen = h.length;
+        aoa.forEach(row => {
+            const cell = String(row[i] || '');
+            if (cell.length > maxLen) maxLen = cell.length;
+        });
+        return { wch: Math.min(Math.max(maxLen + 2, 10), 60) };
+    });
+    ws['!cols'] = colWidths;
+    
+    XLSX.utils.book_append_sheet(wb, ws, '설비관리 통합');
+    
+    // 파일명: 설비관리_통합조회_YYYYMMDD_HHmm.xlsx
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const hh = String(now.getHours()).padStart(2, '0');
+    const mi = String(now.getMinutes()).padStart(2, '0');
+    const fileName = `설비관리_통합조회_${yyyy}${mm}${dd}_${hh}${mi}.xlsx`;
+    
+    XLSX.writeFile(wb, fileName);
+    
+    alert(`✅ 엑셀 파일이 다운로드되었습니다!\n\n📁 파일명: ${fileName}\n📊 총 ${filteredData.length}건`);
+}
+
+// ===== 초기 로드 =====
 loadCurrentData();
 currentData.forEach(row => refreshNextDate(row));
 if (!isManageView) saveData(category, currentData);
 renderHeader();
 renderBody();
 updateDatalists();
+
+// ★ 카테고리 드롭다운 변경 시 자동 필터 적용 (관리 뷰)
+if (isManageView) {
+    const catSel = document.getElementById('filterCategory');
+    if (catSel) {
+        catSel.addEventListener('change', applyFilter);
+    }
+}
