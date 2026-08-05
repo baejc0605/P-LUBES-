@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <title>대시보드 - 설비관리 테스트V1</title>
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
 <body>
-    <!-- 헤더 & 메뉴 -->
     <header class="top-header">
         <div class="header-title">🔧 설비관리 테스트 V1 (기계1파트)</div>
         <button class="logout-btn" onclick="logout()">로그아웃</button>
@@ -27,6 +25,7 @@
                     <li><a href="management.html?category=진공건조기">진공건조기</a></li>
                     <li><a href="management.html?category=냉각기">냉각기</a></li>
                     <li><a href="management.html?category=관리">📋 관리 (통합)</a></li>
+                    <li><a href="checklist.html">⚙️ 체크박스 항목 관리</a></li>
                 </ul>
             </li>
             <li class="has-sub">
@@ -39,62 +38,65 @@
     </nav>
 
     <main class="dashboard-main">
-        <h2>📊 대시보드</h2>
+        <h2>📊 설비관리 대시보드</h2>
 
         <!-- 요약 카드 -->
         <div class="summary-cards">
             <div class="summary-card urgent">
-                <div class="card-title">🚨 차회수리일자 도달</div>
-                <div class="card-value" id="urgentCount">0</div>
-                <div class="card-desc">건</div>
+                <div class="card-title">⚠️ 지연/임박 (D-7 이내)</div>
+                <div class="card-value" id="cardUrgent">0</div>
+                <div class="card-desc">즉시 조치 필요</div>
             </div>
             <div class="summary-card warning">
-                <div class="card-title">⚠️ 7일 이내 예정</div>
-                <div class="card-value" id="warningCount">0</div>
-                <div class="card-desc">건</div>
+                <div class="card-title">🟡 이번달 예정</div>
+                <div class="card-value" id="cardWarning">0</div>
+                <div class="card-desc">이번 달 내 도래</div>
             </div>
             <div class="summary-card normal">
                 <div class="card-title">✅ 정상</div>
-                <div class="card-value" id="normalCount">0</div>
-                <div class="card-desc">건</div>
+                <div class="card-value" id="cardNormal">0</div>
+                <div class="card-desc">여유 있음</div>
             </div>
             <div class="summary-card total">
-                <div class="card-title">📌 전체 등록</div>
-                <div class="card-value" id="totalCount">0</div>
-                <div class="card-desc">건</div>
+                <div class="card-title">📋 전체 등록</div>
+                <div class="card-value" id="cardTotal">0</div>
+                <div class="card-desc">전체 관리 대상</div>
             </div>
         </div>
 
-        <!-- 그래프 영역 -->
-        <div class="chart-container">
-            <div class="chart-box">
-                <h3>📈 카테고리별 작업 진행률</h3>
-                <canvas id="progressChart"></canvas>
+        <!-- ★ 월간 캘린더 -->
+        <div class="calendar-box">
+            <div class="calendar-header">
+                <button class="cal-nav-btn" onclick="changeMonth(-1)">◀ 이전</button>
+                <h3 id="calendarTitle">2026년 1월</h3>
+                <button class="cal-nav-btn" onclick="changeMonth(1)">다음 ▶</button>
+                <button class="cal-nav-btn today-btn" onclick="goToday()">📅 오늘</button>
             </div>
-            <div class="chart-box">
-                <h3>📊 카테고리별 등록 현황</h3>
-                <canvas id="categoryChart"></canvas>
+            <div class="calendar-legend">
+                <span class="legend-item"><span class="legend-dot today-dot"></span> 오늘</span>
+                <span class="legend-item"><span class="legend-dot urgent-dot"></span> 지연/임박(D-7)</span>
+                <span class="legend-item"><span class="legend-dot warning-dot"></span> 이번달 예정</span>
+                <span class="legend-item"><span class="legend-dot normal-dot"></span> 여유</span>
             </div>
+            <div class="calendar-grid" id="calendarGrid"></div>
         </div>
 
-        <!-- 차회수리일자 도달 리스트 -->
+        <!-- 긴급 목록 -->
         <div class="urgent-list-box">
-            <h3>🚨 차회수리일자 도달 항목</h3>
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>카테고리</th>
-                        <th>라인</th>
-                        <th>대상</th>
-                        <th>점검/급지 포인트</th>
-                        <th>차회수리일자</th>
-                        <th>D-Day</th>
-                    </tr>
-                </thead>
-                <tbody id="urgentTableBody"></tbody>
-            </table>
+            <h3>🚨 지연/임박 작업 목록 (D-7 이내)</h3>
+            <div id="urgentList"></div>
         </div>
     </main>
+
+    <!-- 상세 팝오버 -->
+    <div id="dayPopover" class="day-popover" style="display:none;">
+        <div class="popover-header">
+            <span id="popoverDate"></span>
+            <button onclick="closePopover()" class="popover-close">✕</button>
+        </div>
+        <div id="popoverBody"></div>
+    </div>
+
     <script src="js/dashboard.js"></script>
 </body>
 </html>
