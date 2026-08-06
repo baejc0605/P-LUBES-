@@ -1,21 +1,27 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>설비관리 - 설비관리 테스트V1</title>
-    <link rel="stylesheet" href="css/style.css">
+
+    <!-- (캐시 방지용) 배포 후에도 예전 CSS가 보이면 v 값만 올려주세요 -->
+    <link rel="stylesheet" href="css/style.css?v=2" />
+
     <!-- ★ 엑셀 내보내기 라이브러리 (SheetJS) -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
 <body>
     <header class="top-header">
         <div class="header-title">🔧 설비관리 테스트 V1 (기계1파트)</div>
-        <button class="logout-btn" onclick="logout()">로그아웃</button>
+        <!-- logout()은 auth.js에 있음 -->
+        <button class="logout-btn" type="button" onclick="logout()">로그아웃</button>
     </header>
 
     <nav class="main-nav">
         <ul>
             <li><a href="dashboard.html">📊 대시보드</a></li>
+
             <li class="has-sub active">
                 <a href="#">🛢️ 급유급지관리</a>
                 <ul class="sub-menu">
@@ -30,6 +36,7 @@
                     <li><a href="checklist.html">⚙️ 체크박스 항목 관리</a></li>
                 </ul>
             </li>
+
             <li class="has-sub">
                 <a href="#">⚙️ 소모품이력관리</a>
                 <ul class="sub-menu">
@@ -43,9 +50,9 @@
         <h2 id="pageTitle">설비관리</h2>
 
         <div class="info-box">
-            💡 <strong>주기 입력</strong>: <code>7D</code>=7일, <code>1M</code>=1개월, <code>1Y</code>=1년 &nbsp;|&nbsp; 
-            <strong>차회수리일자 규칙</strong>: 모두 체크되면 주기대로 계산, 미체크 있으면 마지막 회차 일자로 고정 🔒 &nbsp;|&nbsp; 
-            <strong>휴지 반영</strong>: 예정일이 휴지 기간과 겹치면 <b>휴지 일수만큼 자동 연장</b> &nbsp;|&nbsp; 
+            💡 <strong>주기 입력</strong>: <code>7D</code>=7일, <code>1M</code>=1개월, <code>1Y</code>=1년 &nbsp;|&nbsp;
+            <strong>차회수리일자 규칙</strong>: 모두 체크되면 주기대로 계산, 미체크 있으면 마지막 회차 일자로 고정 🔒 &nbsp;|&nbsp;
+            <strong>휴지 반영</strong>: 예정일이 휴지 기간과 겹치면 <b>휴지 일수만큼 자동 연장</b> &nbsp;|&nbsp;
             <strong>취소선</strong>: 이전 회차에서 미체크였다가 이후 회차에서 체크된 항목은 취소선으로 표시
         </div>
 
@@ -64,26 +71,33 @@
                     <option value="냉각기">냉각기</option>
                 </select>
             </div>
+
             <div class="filter-item">
                 <label>라인 필터</label>
-                <input type="text" id="filterLine" list="lineList" placeholder="라인 선택/입력">
+                <input type="text" id="filterLine" list="lineList" placeholder="라인 선택/입력" />
                 <datalist id="lineList"></datalist>
             </div>
+
             <div class="filter-item">
                 <label>대상 필터</label>
-                <input type="text" id="filterTarget" list="targetList" placeholder="대상 선택/입력">
+                <input type="text" id="filterTarget" list="targetList" placeholder="대상 선택/입력" />
                 <datalist id="targetList"></datalist>
             </div>
+
             <div class="filter-item">
                 <label>포인트 필터</label>
-                <input type="text" id="filterPoint" list="pointList" placeholder="포인트 선택/입력">
+                <input type="text" id="filterPoint" list="pointList" placeholder="포인트 선택/입력" />
                 <datalist id="pointList"></datalist>
             </div>
-            <button class="filter-btn" onclick="applyFilter()">🔍 필터 적용</button>
-            <button class="filter-btn reset" onclick="resetFilter()">↻ 초기화</button>
-            <button class="filter-btn add" id="addRowBtn" onclick="addNewRow()">➕ 행 추가</button>
+
+            <button class="filter-btn" type="button" onclick="applyFilter()">🔍 필터 적용</button>
+            <button class="filter-btn reset" type="button" onclick="resetFilter()">↻ 초기화</button>
+            <button class="filter-btn add" type="button" id="addRowBtn" onclick="addNewRow()">➕ 행 추가</button>
+
             <!-- ★ 엑셀 내보내기 버튼 (관리 뷰에서만 표시) -->
-            <button class="filter-btn excel" id="excelExportBtn" onclick="exportToExcel()" style="display:none;">📥 엑셀 내보내기</button>
+            <button class="filter-btn excel" type="button" id="excelExportBtn" onclick="exportToExcel()" style="display:none;">
+                📥 엑셀 내보내기
+            </button>
         </div>
 
         <!-- 관리 뷰에서만 표시되는 체크박스 필터 -->
@@ -115,19 +129,19 @@
         <datalist id="pointOptions"></datalist>
         <datalist id="cycleOptions"></datalist>
         <datalist id="reasonOptions">
-            <option value="정기">
-            <option value="돌발">
+            <option value="정기"></option>
+            <option value="돌발"></option>
         </datalist>
     </main>
 
     <!-- 인증/서브메뉴 스크립트 (반드시 먼저 로드) -->
-    <script src="js/auth.js"></script>
+    <script src="js/auth.js?v=2"></script>
     <script>
         // 로그인 체크
         checkLogin();
     </script>
-    
+
     <!-- 관리 페이지 스크립트 -->
-    <script src="js/management.js"></script>
+    <script src="js/management.js?v=2"></script>
 </body>
 </html>
