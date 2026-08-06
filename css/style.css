@@ -804,3 +804,6 @@ body {
     .filter-item input, .filter-item select { min-width: 100%; }
     .login-box { padding: 35px 25px; }
 }
+
+.top-header, .main-nav { position: relative; z-index: 3000; }
+.sub-menu { z-index: 4000; }
