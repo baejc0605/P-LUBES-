@@ -144,8 +144,11 @@ body {
     transform: rotate(180deg);
 }
 
+/* ===== 서브메뉴 =====
+   중요: hover로 열리지 않고, open 클래스일 때만 열리도록 고정합니다.
+*/
 .sub-menu {
-    display: none;
+    display: none;            /* 기본 닫힘 */
     position: absolute;
     top: 100%;
     left: 0;
@@ -157,8 +160,18 @@ body {
     flex-direction: column;
     gap: 0;
 }
-/* 클릭 시 open 클래스가 붙으면 서브메뉴 표시 */
-.main-nav > ul > li.has-sub.open .sub-menu { display: flex; }
+
+/* open 클래스가 붙은 경우에만 열림 (직계 서브메뉴만) */
+.main-nav > ul > li.has-sub.open > .sub-menu {
+    display: flex;
+}
+
+/* (방어 규칙) 혹시 다른 CSS에 hover로 열리게 되어 있어도 강제로 닫기
+   - open이 아닐 때는 무조건 display:none
+*/
+.main-nav > ul > li.has-sub:not(.open) > .sub-menu {
+    display: none !important;
+}
 
 .sub-menu li a {
     display: block;
